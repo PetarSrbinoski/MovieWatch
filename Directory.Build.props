@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <BaseIntermediateOutputPath Condition="'$(MovieWatchBuildRoot)' != ''">$(MovieWatchBuildRoot)/$(MSBuildProjectName)/obj/</BaseIntermediateOutputPath>
+    <!-- NuGet assets contain absolute paths; Windows and Linux must not share them. -->
+    <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)' == ''">obj/$(OS)/</BaseIntermediateOutputPath>
+    <BaseOutputPath Condition="'$(BaseOutputPath)' == ''">bin/$(OS)/</BaseOutputPath>
     <DefaultItemExcludes>$(DefaultItemExcludes);**/obj/**;**/bin/**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>

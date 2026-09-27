@@ -4,8 +4,6 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -25,9 +23,12 @@ using MovieWatch.Web.Extensions;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditSaveChangesInterceptor>();
-builder.Services.AddDbContext<ApplicationDbContext>((provider, options) => options.UseSqlite(
-    builder.Configuration.GetConnectionString("MovieWatch") ?? "Data Source=moviewatch.db")
-    .AddInterceptors(provider.GetRequiredService<AuditSaveChangesInterceptor>()));
+builder.Services.AddDbContext<ApplicationDbContext>((provider, options) =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var connection = configuration.GetConnectionString("MovieWatch") ?? "Data Source=moviewatch.db";
+    options.UseSqlite(connection).AddInterceptors(provider.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 builder.Services.AddIdentityCore<IdentityUser>(options =>
 {
     options.User.RequireUniqueEmail = true;
