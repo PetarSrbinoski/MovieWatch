@@ -8,12 +8,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MovieWatch.Service", "Movie
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MovieWatch.Web", "MovieWatch.Web\MovieWatch.Web.csproj", "{2C069A5C-D4E6-4AA9-94BD-CD46B6DA0FFA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MovieWatch.Tests", "MovieWatch.Tests\MovieWatch.Tests.csproj", "{6DD2F598-DA6B-474B-9A99-1098ABFB23F0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6DD2F598-DA6B-474B-9A99-1098ABFB23F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DD2F598-DA6B-474B-9A99-1098ABFB23F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DD2F598-DA6B-474B-9A99-1098ABFB23F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DD2F598-DA6B-474B-9A99-1098ABFB23F0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{76622DCF-F199-48C3-BC75-E5C6F3F33AB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{76622DCF-F199-48C3-BC75-E5C6F3F33AB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{76622DCF-F199-48C3-BC75-E5C6F3F33AB7}.Release|Any CPU.ActiveCfg = Release|Any CPU

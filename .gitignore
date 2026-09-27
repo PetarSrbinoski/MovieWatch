@@ -1,1 +1,9 @@
 .idea/
+**/bin/
+**/obj/
+**/TestResults/
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+.env
