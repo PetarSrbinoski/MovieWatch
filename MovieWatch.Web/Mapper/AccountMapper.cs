@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using Microsoft.AspNetCore.Http;
 using MovieWatch.Domain.Common;
 using MovieWatch.Domain.Dto;
 using MovieWatch.Service.Interface;
