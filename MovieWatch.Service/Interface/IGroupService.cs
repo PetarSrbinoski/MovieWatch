@@ -4,7 +4,7 @@ namespace MovieWatch.Service.Interface;
 
 public interface IGroupService
 {
-    Task<List<GroupDto>> ListAsync(ActorDto actor, CancellationToken cancellationToken);
+    Task<List<GroupDto>> ListAsync(ActorDto actor, int skip, int take, CancellationToken cancellationToken);
     Task<GroupDto> GetAsync(ActorDto actor, Guid groupId, CancellationToken cancellationToken);
     Task<GroupDto> CreateAsync(ActorDto actor, string name, string description, CancellationToken cancellationToken);
     Task<GroupDto> UpdateAsync(ActorDto actor, Guid groupId, string name, string description, CancellationToken cancellationToken);

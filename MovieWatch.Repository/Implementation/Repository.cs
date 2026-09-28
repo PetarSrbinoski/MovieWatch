@@ -24,9 +24,13 @@ public class Repository<TEntity>(ApplicationDbContext context) : IRepository<TEn
             .AsNoTracking().ToListAsync(cancellationToken);
     }
 
-    public Task<List<TEntity>> PageAsync(int skip, int take, CancellationToken cancellationToken = default)
+    public Task<List<TEntity>> PageAsync(int skip, int take, CancellationToken cancellationToken = default,
+        Expression<Func<TEntity, bool>>? predicate = null)
     {
-        return context.Set<TEntity>().AsNoTracking().OrderBy(entity => entity.Id).Skip(skip).Take(take)
+        var query = context.Set<TEntity>().AsNoTracking();
+        if (predicate is not null)
+            query = query.Where(predicate);
+        return query.OrderBy(entity => entity.Id).Skip(skip).Take(take)
             .ToListAsync(cancellationToken);
     }
 

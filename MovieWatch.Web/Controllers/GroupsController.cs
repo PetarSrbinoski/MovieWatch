@@ -10,9 +10,9 @@ namespace MovieWatch.Web.Controllers;
 public sealed class GroupsController(GroupMapper mapper) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<List<GroupResponse>>> List(CancellationToken cancellationToken)
+    public async Task<ActionResult<List<GroupResponse>>> List(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
     {
-        return Ok(await mapper.ListAsync(cancellationToken));
+        return Ok(await mapper.ListAsync(skip, take, cancellationToken));
     }
 
     [HttpGet("{groupId:guid}")]

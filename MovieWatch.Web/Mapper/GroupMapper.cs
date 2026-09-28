@@ -7,9 +7,9 @@ namespace MovieWatch.Web.Mapper;
 
 public sealed class GroupMapper(IGroupService service, AccountMapper accounts)
 {
-    public async Task<List<GroupResponse>> ListAsync(CancellationToken cancellationToken)
+    public async Task<List<GroupResponse>> ListAsync(int skip, int take, CancellationToken cancellationToken)
     {
-        return (await service.ListAsync(await accounts.GetActorAsync(cancellationToken), cancellationToken))
+        return (await service.ListAsync(await accounts.GetActorAsync(cancellationToken), skip, take, cancellationToken))
             .Select(g => g.ToResponse()).ToList();
     }
 

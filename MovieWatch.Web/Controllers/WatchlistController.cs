@@ -10,9 +10,9 @@ namespace MovieWatch.Web.Controllers;
 public sealed class WatchlistController(PersonalMapper mapper) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<List<WatchlistResponse>>> List(Guid viewerId, CancellationToken cancellationToken)
+    public async Task<ActionResult<List<WatchlistResponse>>> List(Guid viewerId, int skip = 0, int take = 20, CancellationToken cancellationToken = default)
     {
-        return Ok(await mapper.ListWatchlistAsync(viewerId, cancellationToken));
+        return Ok(await mapper.ListWatchlistAsync(viewerId, skip, take, cancellationToken));
     }
 
     [HttpGet("{id:guid}")]

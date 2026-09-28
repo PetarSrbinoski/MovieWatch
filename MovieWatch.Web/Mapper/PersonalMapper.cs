@@ -7,9 +7,9 @@ namespace MovieWatch.Web.Mapper;
 
 public sealed class PersonalMapper(IPersonalDataService service, AccountMapper accounts)
 {
-    public async Task<List<PreferenceResponse>> ListPreferencesAsync(Guid viewerId, CancellationToken cancellationToken)
+    public async Task<List<PreferenceResponse>> ListPreferencesAsync(Guid viewerId, int skip, int take, CancellationToken cancellationToken)
     {
-        return (await service.ListPreferencesAsync(await accounts.GetActorAsync(cancellationToken), viewerId, cancellationToken))
+        return (await service.ListPreferencesAsync(await accounts.GetActorAsync(cancellationToken), viewerId, skip, take, cancellationToken))
             .Select(p => p.ToResponse()).ToList();
     }
 
@@ -37,9 +37,9 @@ public sealed class PersonalMapper(IPersonalDataService service, AccountMapper a
         await service.DeletePreferenceAsync(await accounts.GetActorAsync(cancellationToken), viewerId, id, cancellationToken);
     }
 
-    public async Task<List<WatchlistResponse>> ListWatchlistAsync(Guid viewerId, CancellationToken cancellationToken)
+    public async Task<List<WatchlistResponse>> ListWatchlistAsync(Guid viewerId, int skip, int take, CancellationToken cancellationToken)
     {
-        return (await service.ListWatchlistAsync(await accounts.GetActorAsync(cancellationToken), viewerId, cancellationToken))
+        return (await service.ListWatchlistAsync(await accounts.GetActorAsync(cancellationToken), viewerId, skip, take, cancellationToken))
             .Select(e => e.ToResponse()).ToList();
     }
 

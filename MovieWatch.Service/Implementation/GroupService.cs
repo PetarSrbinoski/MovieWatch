@@ -10,13 +10,13 @@ public sealed class GroupService(
     IRepository<Group> groups, IRepository<GroupMembership> memberships,
     IRepository<Viewer> viewers) : IGroupService
 {
-    public async Task<List<GroupDto>> ListAsync(ActorDto actor, CancellationToken cancellationToken)
+    public async Task<List<GroupDto>> ListAsync(ActorDto actor, int skip, int take, CancellationToken cancellationToken)
     {
-        var accessible = actor.IsAdministrator
-            ? await groups.ListAsync(cancellationToken: cancellationToken)
-            : (await groups.ListAsync(cancellationToken: cancellationToken))
-                .Where(g => g.OwnerViewerId == actor.ViewerId || g.Memberships.Any(m => m.ViewerId == actor.ViewerId)).ToList();
-        return accessible.OrderBy(g => g.Id).Select(ToDto).ToList();
+        Pagination.Validate(skip, take);
+        var accessible = await groups.PageAsync(skip, take, cancellationToken,
+            g => actor.IsAdministrator || g.OwnerViewerId == actor.ViewerId
+                || g.Memberships.Any(m => m.ViewerId == actor.ViewerId));
+        return accessible.Select(ToDto).ToList();
     }
 
     public async Task<GroupDto> GetAsync(ActorDto actor, Guid groupId, CancellationToken cancellationToken)

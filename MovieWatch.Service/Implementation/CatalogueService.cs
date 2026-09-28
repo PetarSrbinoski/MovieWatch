@@ -13,7 +13,8 @@ public sealed class CatalogueService(
 {
     public async Task<List<GenreDto>> ListGenresAsync(int skip, int take, CancellationToken cancellationToken)
     {
-        return (await genres.PageAsync(ValidateSkip(skip), ValidateTake(take), cancellationToken))
+        Pagination.Validate(skip, take);
+        return (await genres.PageAsync(skip, take, cancellationToken))
             .Select(ToDto).ToList();
     }
 
@@ -46,7 +47,8 @@ public sealed class CatalogueService(
 
     public async Task<List<MoodDto>> ListMoodsAsync(int skip, int take, CancellationToken cancellationToken)
     {
-        return (await moods.PageAsync(ValidateSkip(skip), ValidateTake(take), cancellationToken))
+        Pagination.Validate(skip, take);
+        return (await moods.PageAsync(skip, take, cancellationToken))
             .Select(ToDto).ToList();
     }
 
@@ -79,7 +81,8 @@ public sealed class CatalogueService(
 
     public async Task<List<MovieDto>> ListMoviesAsync(int skip, int take, CancellationToken cancellationToken)
     {
-        return (await movies.PageAsync(ValidateSkip(skip), ValidateTake(take), cancellationToken))
+        Pagination.Validate(skip, take);
+        return (await movies.PageAsync(skip, take, cancellationToken))
             .Select(movie => movie.ToDto()).ToList();
     }
 
@@ -163,13 +166,5 @@ public sealed class CatalogueService(
     {
         return (description?.Trim() ?? "") is { Length: <= 1000 } value ? value
             : throw new OperationException(FailureKind.Validation, "Description must be at most 1000 characters.");
-    }
-    private static int ValidateSkip(int skip)
-    {
-        return skip >= 0 ? skip : throw new OperationException(FailureKind.Validation, "Skip must be nonnegative.");
-    }
-    private static int ValidateTake(int take)
-    {
-        return take is >= 1 and <= 100 ? take : throw new OperationException(FailureKind.Validation, "Take must be 1 to 100.");
     }
 }

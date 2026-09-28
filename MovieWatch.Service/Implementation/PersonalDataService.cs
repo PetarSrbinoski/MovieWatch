@@ -11,11 +11,12 @@ public sealed class PersonalDataService(
     IRepository<Movie> movies, IRepository<GenrePreference> preferences,
     IRepository<WatchlistEntry> watchlist) : IPersonalDataService
 {
-    public async Task<List<PreferenceDto>> ListPreferencesAsync(ActorDto actor, Guid viewerId, CancellationToken cancellationToken)
+    public async Task<List<PreferenceDto>> ListPreferencesAsync(ActorDto actor, Guid viewerId, int skip, int take, CancellationToken cancellationToken)
     {
         RequireAccess(actor, viewerId);
-        return (await preferences.ListAsync(p => p.ViewerId == viewerId, cancellationToken))
-            .OrderBy(p => p.Id).Select(ToDto).ToList();
+        Pagination.Validate(skip, take);
+        return (await preferences.PageAsync(skip, take, cancellationToken, p => p.ViewerId == viewerId))
+            .Select(ToDto).ToList();
     }
 
     public async Task<PreferenceDto> GetPreferenceAsync(ActorDto actor, Guid viewerId, Guid id, CancellationToken cancellationToken)
@@ -50,11 +51,12 @@ public sealed class PersonalDataService(
         await preferences.DeleteAsync(await FindPreferenceAsync(actor, viewerId, id, cancellationToken), cancellationToken);
     }
 
-    public async Task<List<WatchlistDto>> ListWatchlistAsync(ActorDto actor, Guid viewerId, CancellationToken cancellationToken)
+    public async Task<List<WatchlistDto>> ListWatchlistAsync(ActorDto actor, Guid viewerId, int skip, int take, CancellationToken cancellationToken)
     {
         RequireAccess(actor, viewerId);
-        return (await watchlist.ListAsync(e => e.ViewerId == viewerId, cancellationToken))
-            .OrderBy(e => e.Id).Select(ToDto).ToList();
+        Pagination.Validate(skip, take);
+        return (await watchlist.PageAsync(skip, take, cancellationToken, e => e.ViewerId == viewerId))
+            .Select(ToDto).ToList();
     }
 
     public async Task<WatchlistDto> GetWatchlistEntryAsync(ActorDto actor, Guid viewerId, Guid id, CancellationToken cancellationToken)
