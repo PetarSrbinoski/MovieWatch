@@ -8,6 +8,21 @@ namespace MovieWatch.Repository.Implementation;
 
 public sealed class CatalogueImportRepository(ApplicationDbContext context) : ICatalogueImportRepository
 {
+    public async Task UpsertGenresAsync(IReadOnlyList<ImportedGenreDto> genres, CancellationToken cancellationToken)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        foreach (var external in genres)
+        {
+            var genre = await context.Genres.SingleOrDefaultAsync(g => g.TmdbId == external.TmdbId, cancellationToken);
+            if (genre is null)
+                context.Genres.Add(new Genre(external.Name, external.TmdbId));
+            else
+                genre.Name = external.Name;
+        }
+        await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public async Task UpsertAsync(ImportedMovieDto imported, DateTimeOffset now, CancellationToken cancellationToken)
     {
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
@@ -43,6 +58,7 @@ public sealed class CatalogueImportRepository(ApplicationDbContext context) : IC
             movie.ReleaseDate = imported.ReleaseDate;
             movie.VoteCount = imported.VoteCount;
             movie.LastImportedAt = now;
+            movie.PosterPath = imported.PosterPath;
             var desired = genreIds.ToHashSet();
             foreach (var old in movie.MovieGenres.Where(link => !desired.Contains(link.GenreId)))
                 context.MovieGenres.Remove(old);
@@ -58,4 +74,3 @@ public sealed class CatalogueImportRepository(ApplicationDbContext context) : IC
         }
     }
 }
-            movie.PosterPath = imported.PosterPath;

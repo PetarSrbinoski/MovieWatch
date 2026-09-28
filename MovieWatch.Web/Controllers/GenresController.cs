@@ -10,6 +10,12 @@ namespace MovieWatch.Web.Controllers;
 [ApiController, Authorize, Route("api/genres")]
 public sealed class GenresController(CatalogueMapper mapper) : ControllerBase
 {
+    [HttpPost("sync"), Authorize(Roles = nameof(AccountRole.Administrator))]
+    public async Task<IActionResult> Sync(CancellationToken cancellationToken)
+    {
+        return Ok(new { Count = await mapper.SyncGenresAsync(cancellationToken) });
+    }
+
     [HttpGet]
     public async Task<ActionResult<List<GenreResponse>>> List(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
     {

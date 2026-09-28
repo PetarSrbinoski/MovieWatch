@@ -9,6 +9,33 @@ namespace MovieWatch.Tests;
 public sealed class TmdbClientTests
 {
     [Fact]
+    public async Task Client_fetches_full_genre_list_without_discovering_movies()
+    {
+        var client = Client(request =>
+        {
+            Assert.Equal("/3/genre/movie/list", request.RequestUri!.AbsolutePath);
+            Assert.Equal("?language=en", request.RequestUri.Query);
+            Assert.Equal("test-token", request.Headers.Authorization?.Parameter);
+            return Json("""{"genres":[{"id":1,"name":" Comedy "},{"id":1,"name":"Comedy"},{"id":2,"name":"Drama"}]}""");
+        });
+        var genres = await client.GetGenresAsync(default);
+        Assert.Equal(2, genres.Count);
+        Assert.Equal("Comedy", genres[0].Name);
+        Assert.Equal(2, genres[1].TmdbId);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"genres\":[]}")]
+    [InlineData("{\"genres\":[{\"id\":1,\"name\":\"\"}]}")]
+    [InlineData("not json")]
+    public async Task Client_rejects_invalid_genre_lists(string body)
+    {
+        var error = await Assert.ThrowsAsync<ImportSourceException>(() => Client(_ => Json(body)).GetGenresAsync(default));
+        Assert.False(error.Transient);
+    }
+
+    [Fact]
     public async Task Client_extracts_discovery_and_normalizes_movie_details()
     {
         var calls = new List<Uri>();
@@ -26,11 +53,25 @@ public sealed class TmdbClientTests
         Assert.NotNull(movie);
         Assert.Equal("Film", movie.Title);
         Assert.Equal("Story", movie.Overview);
+        Assert.Equal("/real-poster.jpg", movie.PosterPath);
         Assert.Null(movie.RuntimeMinutes);
         Assert.Null(movie.ReleaseDate);
         Assert.Single(movie.Genres);
         Assert.Equal("Comedy", movie.Genres[0].Name);
         Assert.Contains("sort_by=popularity.desc&page=2", calls[0].Query, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("https://example.com/poster.jpg")]
+    [InlineData("/../poster.jpg")]
+    public async Task Missing_or_invalid_poster_does_not_discard_the_movie(string? poster)
+    {
+        var body = System.Text.Json.JsonSerializer.Serialize(new { id = 42, title = "Film", poster_path = poster });
+        var movie = await Client(_ => Json(body)).GetMovieAsync(42, default);
+        Assert.NotNull(movie);
+        Assert.Null(movie.PosterPath);
     }
 
     [Theory]
@@ -53,7 +94,6 @@ public sealed class TmdbClientTests
 
     private static TmdbClient Client(Func<HttpRequestMessage, HttpResponseMessage> respond)
     {
-        Assert.Equal("/real-poster.jpg", movie.PosterPath);
         var http = new HttpClient(new StubHandler(respond))
         {
             BaseAddress = new Uri("https://api.themoviedb.org/3/")
@@ -61,19 +101,6 @@ public sealed class TmdbClientTests
         return new TmdbClient(http, Options.Create(new TmdbSettings { ReadAccessToken = "test-token" }),
             TimeProvider.System);
     }
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("https://example.com/poster.jpg")]
-    [InlineData("/../poster.jpg")]
-    public async Task Missing_or_invalid_poster_does_not_discard_the_movie(string? poster)
-    {
-        var body = System.Text.Json.JsonSerializer.Serialize(new { id = 42, title = "Film", poster_path = poster });
-        var movie = await Client(_ => Json(body)).GetMovieAsync(42, default);
-        Assert.NotNull(movie);
-        Assert.Null(movie.PosterPath);
-    }
-
 
     private static HttpResponseMessage Json(string body)
     {

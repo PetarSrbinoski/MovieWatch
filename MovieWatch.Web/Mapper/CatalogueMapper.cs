@@ -5,8 +5,13 @@ using MovieWatch.Web.Response;
 
 namespace MovieWatch.Web.Mapper;
 
-public sealed class CatalogueMapper(ICatalogueService catalogue)
+public sealed class CatalogueMapper(ICatalogueService catalogue, ICatalogueSyncService sync)
 {
+    public Task<int> SyncGenresAsync(CancellationToken cancellationToken)
+    {
+        return sync.SyncGenresAsync(cancellationToken);
+    }
+
     public Task<List<GenreDto>> ListGenresAsync(int skip, int take, CancellationToken cancellationToken)
     {
         return catalogue.ListGenresAsync(skip, take, cancellationToken);

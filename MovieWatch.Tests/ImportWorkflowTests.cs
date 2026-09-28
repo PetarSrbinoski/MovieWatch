@@ -16,6 +16,32 @@ namespace MovieWatch.Tests;
 public sealed class ImportWorkflowTests
 {
     [Fact]
+    public async Task Genre_sync_requires_admin_and_updates_full_list_without_duplicate_ids()
+    {
+        var source = new StubTmdbClient();
+        using var factory = new ImportFactory(source);
+        using var client = factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/genres/sync", null)).StatusCode);
+        await ApiAccounts.RegisterAsync(client, "viewer@example.com");
+        await ApiAccounts.SignInAsync(client, "viewer@example.com");
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync("/api/genres/sync", null)).StatusCode);
+        await ApiAccounts.SignInAsync(client, "admin@example.com");
+        Assert.Empty((await client.GetFromJsonAsync<JsonElement>("/api/movies")).EnumerateArray());
+        Assert.Empty((await client.GetFromJsonAsync<JsonElement>("/api/genres")).EnumerateArray());
+        var first = await client.PostAsync("/api/genres/sync", null);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(2, (await first.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("count").GetInt32());
+        var genres = (await client.GetFromJsonAsync<JsonElement>("/api/genres")).EnumerateArray().ToArray();
+        var originalId = Id(genres.Single(g => g.GetProperty("tmdbId").GetInt64() == 1));
+        source.GenreName = "Updated comedy";
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/genres/sync", null)).StatusCode);
+        var updated = (await client.GetFromJsonAsync<JsonElement>("/api/genres")).EnumerateArray().ToArray();
+        Assert.Equal(2, updated.Length);
+        Assert.Equal(originalId, Id(updated.Single(g => g.GetProperty("name").GetString() == "Updated comedy")));
+        Assert.Empty((await client.GetFromJsonAsync<JsonElement>("/api/movies")).EnumerateArray());
+    }
+
+    [Fact]
     public async Task Persisted_job_imports_movies_and_reimport_updates_without_duplicates()
     {
         var source = new StubTmdbClient();
@@ -32,6 +58,8 @@ public sealed class ImportWorkflowTests
         var catalogue = await client.GetFromJsonAsync<JsonElement>("/api/movies");
         var movie = catalogue.EnumerateArray().Single();
         Assert.Equal("First title", movie.GetProperty("title").GetString());
+        Assert.Equal("/first-poster.jpg", movie.GetProperty("posterPath").GetString());
+        source.PosterPath = "/updated-poster.jpg";
         source.Title = "Updated title";
         var second = await SubmitAsync(client);
         using (var scope = factory.Services.CreateScope())
@@ -39,6 +67,7 @@ public sealed class ImportWorkflowTests
         var updated = await client.GetFromJsonAsync<JsonElement>("/api/movies");
         Assert.Equal("Updated title", updated.EnumerateArray().Single().GetProperty("title").GetString());
         Assert.Equal(Id(movie), Id(updated.EnumerateArray().Single()));
+        Assert.Equal("/updated-poster.jpg", updated.EnumerateArray().Single().GetProperty("posterPath").GetString());
         var finishedSecond = await client.GetFromJsonAsync<JsonElement>($"/api/import-jobs/{Id(second)}");
         Assert.Equal(HttpStatusCode.NoContent,
             (await client.DeleteAsync($"/api/import-jobs/{Id(second)}?version={finishedSecond.GetProperty("version").GetInt32()}")).StatusCode);
@@ -58,8 +87,6 @@ public sealed class ImportWorkflowTests
         {
             title = "Local comedy", overview = "Manual", runtimeMinutes = 90,
             releaseDate = "2020-01-01", genreIds = new[] { Id(manualGenre) }
-        Assert.Equal("/first-poster.jpg", movie.GetProperty("posterPath").GetString());
-        source.PosterPath = "/updated-poster.jpg";
         });
         Assert.Equal(HttpStatusCode.Created, manualMovieResponse.StatusCode);
         var manualMovie = await manualMovieResponse.Content.ReadFromJsonAsync<JsonElement>();
@@ -280,7 +307,11 @@ public sealed class ImportWorkflowTests
 
     private sealed class StubTmdbClient : ITmdbClient
     {
+        public Task<IReadOnlyList<ImportedGenreDto>> GetGenresAsync(CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<ImportedGenreDto>>([new ImportedGenreDto(1, GenreName), new ImportedGenreDto(2, "Drama")]);
+
         public string Title { get; set; } = "First title";
+        public string? PosterPath { get; set; } = "/first-poster.jpg";
         public string GenreName { get; set; } = "Comedy";
         public IReadOnlyList<long> Ids { get; set; } = [42, 42];
         public int FailuresRemaining { get; set; }
@@ -311,7 +342,6 @@ public sealed class ImportWorkflowTests
         }
         public void Advance(TimeSpan duration)
         {
-        public string? PosterPath { get; set; } = "/first-poster.jpg";
             _now += duration;
         }
     }

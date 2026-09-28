@@ -38,6 +38,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IIdentityRepository, IdentityRepository>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ICatalogueService, CatalogueService>();
+builder.Services.AddScoped<ICatalogueSyncService, CatalogueSyncService>();
 builder.Services.AddScoped<IPersonalDataService, PersonalDataService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();

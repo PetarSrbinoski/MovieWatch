@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Http;
 using MovieWatch.Domain.Common;
+using MovieWatch.Service.Implementation;
 
 namespace MovieWatch.Web.Errors;
 
@@ -15,7 +15,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problems) : IExce
             FailureKind.Unauthenticated => StatusCodes.Status401Unauthorized,
             FailureKind.NotFound => StatusCodes.Status404NotFound,
             _ => StatusCodes.Status500InternalServerError
-        } : StatusCodes.Status500InternalServerError;
+        } : exception is ImportSourceException ? StatusCodes.Status502BadGateway : StatusCodes.Status500InternalServerError;
 
         context.Response.StatusCode = status;
         Console.Error.WriteLine(exception);
@@ -28,7 +28,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problems) : IExce
             {
                 Status = status,
                 Title = Microsoft.AspNetCore.WebUtilities.ReasonPhrases.GetReasonPhrase(status),
-                Detail = exception is OperationException ? exception.Message : "An unexpected error occurred."
+                Detail = exception is OperationException or ImportSourceException ? exception.Message : "An unexpected error occurred."
             }
         });
     }

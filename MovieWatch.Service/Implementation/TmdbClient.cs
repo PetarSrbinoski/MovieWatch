@@ -21,6 +21,24 @@ public sealed class TmdbClient(HttpClient client, IOptions<TmdbSettings> setting
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    public async Task<IReadOnlyList<ImportedGenreDto>> GetGenresAsync(CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync("genre/movie/list?language=en", false, cancellationToken);
+        try
+        {
+            var result = await response.Content.ReadFromJsonAsync<GenreList>(JsonOptions, cancellationToken);
+            if (result?.Genres is not { Length: > 0 } genres
+                || genres.Any(g => g.Id <= 0 || string.IsNullOrWhiteSpace(g.Name) || g.Name.Trim().Length > 100))
+                throw new JsonException();
+            return genres.GroupBy(g => g.Id)
+                .Select(g => new ImportedGenreDto(g.Key, g.First().Name!.Trim())).ToArray();
+        }
+        catch (JsonException)
+        {
+            throw new ImportSourceException("TMDB genre response was invalid. Existing genres were kept.", false);
+        }
+    }
+
     public async Task<IReadOnlyList<long>> DiscoverMovieIdsAsync(int page, CancellationToken cancellationToken)
     {
         using var response = await SendAsync($"discover/movie?sort_by=popularity.desc&page={page}", false, cancellationToken);
@@ -103,6 +121,8 @@ public sealed class TmdbClient(HttpClient client, IOptions<TmdbSettings> setting
             throw new ImportSourceException("TMDB rejected the configured credentials.", false);
         throw new ImportSourceException("TMDB rejected the request.", false);
     }
+
+    private record GenreList(ExternalGenre[]? Genres);
 
     private record Discovery(
         [property: JsonPropertyName("results")] DiscoveryItem[]? Results
