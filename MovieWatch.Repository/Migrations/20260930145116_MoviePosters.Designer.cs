@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MovieWatch.Repository;
 
@@ -10,9 +11,11 @@ using MovieWatch.Repository;
 namespace MovieWatch.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260930145116_MoviePosters")]
+    partial class MoviePosters
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
@@ -488,14 +491,14 @@ namespace MovieWatch.Repository.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
-                    b.Property<DateOnly?>("ReleaseDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("RuntimeMinutes")
                     b.Property<string>("PosterPath")
                         .HasMaxLength(255)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateOnly?>("ReleaseDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RuntimeMinutes")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")

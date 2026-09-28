@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MovieWatch.Domain.Config;
 using MovieWatch.Domain.Dto;
@@ -56,7 +57,10 @@ public sealed class TmdbClient(HttpClient client, IOptions<TmdbSettings> setting
             return new ImportedMovieDto(result.Id, result.Title.Trim(),
                 overview[..Math.Min(overview.Length, 4000)],
                 result.Runtime is > 0 ? result.Runtime : null, releaseDate,
-                Math.Max(0, result.VoteCount), genres);
+                Math.Max(0, result.VoteCount), genres,
+                result.PosterPath is { Length: <= 255 } poster
+                    && Regex.IsMatch(poster, @"^/[A-Za-z0-9_-]+\.(?:jpg|jpeg|png|webp)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+                    ? poster : null);
         }
         catch (JsonException exception)
         {
@@ -120,6 +124,7 @@ public sealed class TmdbClient(HttpClient client, IOptions<TmdbSettings> setting
         [property: JsonPropertyName("runtime")] int? Runtime,
         [property: JsonPropertyName("release_date")] string? ReleaseDate,
         [property: JsonPropertyName("vote_count")] int VoteCount,
-        [property: JsonPropertyName("genres")] ExternalGenre[]? Genres
+        [property: JsonPropertyName("genres")] ExternalGenre[]? Genres,
+        [property: JsonPropertyName("poster_path")] string? PosterPath
         );
 }

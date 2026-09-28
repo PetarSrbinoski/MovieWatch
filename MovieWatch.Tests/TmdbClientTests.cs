@@ -18,7 +18,7 @@ public sealed class TmdbClientTests
             calls.Add(request.RequestUri!);
             if (request.RequestUri!.AbsolutePath.EndsWith("discover/movie", StringComparison.Ordinal))
                 return Json("""{"results":[{"id":42},{"id":42},{"id":43}]}""");
-            return Json("""{"id":42,"title":"  Film  ","overview":"  Story  ","runtime":0,"release_date":"","vote_count":7,"genres":[{"id":1,"name":" Comedy "},{"id":1,"name":"Comedy"}]}""");
+            return Json("""{"id":42,"title":"  Film  ","overview":"  Story  ","runtime":0,"release_date":"","vote_count":7,"poster_path":"/real-poster.jpg","genres":[{"id":1,"name":" Comedy "},{"id":1,"name":"Comedy"}]}""");
         });
         var ids = await client.DiscoverMovieIdsAsync(2, default);
         Assert.Equal(new long[] { 42, 43 }, ids);
@@ -53,6 +53,7 @@ public sealed class TmdbClientTests
 
     private static TmdbClient Client(Func<HttpRequestMessage, HttpResponseMessage> respond)
     {
+        Assert.Equal("/real-poster.jpg", movie.PosterPath);
         var http = new HttpClient(new StubHandler(respond))
         {
             BaseAddress = new Uri("https://api.themoviedb.org/3/")
@@ -60,6 +61,19 @@ public sealed class TmdbClientTests
         return new TmdbClient(http, Options.Create(new TmdbSettings { ReadAccessToken = "test-token" }),
             TimeProvider.System);
     }
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("https://example.com/poster.jpg")]
+    [InlineData("/../poster.jpg")]
+    public async Task Missing_or_invalid_poster_does_not_discard_the_movie(string? poster)
+    {
+        var body = System.Text.Json.JsonSerializer.Serialize(new { id = 42, title = "Film", poster_path = poster });
+        var movie = await Client(_ => Json(body)).GetMovieAsync(42, default);
+        Assert.NotNull(movie);
+        Assert.Null(movie.PosterPath);
+    }
+
 
     private static HttpResponseMessage Json(string body)
     {

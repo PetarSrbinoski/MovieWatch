@@ -21,7 +21,8 @@ public record MovieDto(
     long? TmdbId,
     int VoteCount,
     DateTimeOffset? LastImportedAt,
-    IReadOnlyList<GenreDto> Genres
+    IReadOnlyList<GenreDto> Genres,
+    string? PosterPath = null
     );
 
 public record MovieInputDto(

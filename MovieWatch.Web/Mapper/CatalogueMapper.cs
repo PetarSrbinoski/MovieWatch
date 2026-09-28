@@ -83,7 +83,7 @@ public static class CatalogueMappingExtensions
     {
         return new(dto.Id, dto.Title, dto.Overview,
         dto.RuntimeMinutes, dto.ReleaseDate, dto.TmdbId, dto.VoteCount, dto.LastImportedAt,
-        dto.Genres.Select(g => g.ToResponse()).ToArray());
+        dto.Genres.Select(g => g.ToResponse()).ToArray(), dto.PosterPath);
     }
     public static MovieInputDto ToDto(this MovieRequest request)
     {

@@ -58,3 +58,4 @@ public sealed class CatalogueImportRepository(ApplicationDbContext context) : IC
         }
     }
 }
+            movie.PosterPath = imported.PosterPath;

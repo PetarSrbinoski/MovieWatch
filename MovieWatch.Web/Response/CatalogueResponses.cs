@@ -21,5 +21,6 @@ public record MovieResponse(
     long? TmdbId,
     int VoteCount,
     DateTimeOffset? LastImportedAt,
-    IReadOnlyList<GenreResponse> Genres
+    IReadOnlyList<GenreResponse> Genres,
+    string? PosterPath = null
     );

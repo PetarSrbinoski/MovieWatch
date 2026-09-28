@@ -10,6 +10,6 @@ public static class CatalogueMappingExtensions
         return new(movie.Id, movie.Title, movie.Overview,
         movie.RuntimeMinutes, movie.ReleaseDate, movie.TmdbId, movie.VoteCount, movie.LastImportedAt,
         movie.MovieGenres.OrderBy(link => link.Genre.Name)
-            .Select(link => new GenreDto(link.GenreId, link.Genre.Name, link.Genre.TmdbId)).ToArray());
+            .Select(link => new GenreDto(link.GenreId, link.Genre.Name, link.Genre.TmdbId)).ToArray(), movie.PosterPath);
     }
 }

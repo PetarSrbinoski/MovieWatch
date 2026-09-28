@@ -41,6 +41,7 @@ public sealed class Movie : BaseAuditableEntity
     public int VoteCount { get; set; }
     public DateTimeOffset? LastImportedAt { get; set; }
     public List<MovieGenre> MovieGenres { get; set; } = [];
+    public string? PosterPath { get; set; }
 }
 
 public sealed class MovieGenre

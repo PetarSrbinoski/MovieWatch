@@ -58,6 +58,8 @@ public sealed class ImportWorkflowTests
         {
             title = "Local comedy", overview = "Manual", runtimeMinutes = 90,
             releaseDate = "2020-01-01", genreIds = new[] { Id(manualGenre) }
+        Assert.Equal("/first-poster.jpg", movie.GetProperty("posterPath").GetString());
+        source.PosterPath = "/updated-poster.jpg";
         });
         Assert.Equal(HttpStatusCode.Created, manualMovieResponse.StatusCode);
         var manualMovie = await manualMovieResponse.Content.ReadFromJsonAsync<JsonElement>();
@@ -296,7 +298,7 @@ public sealed class ImportWorkflowTests
             if (tmdbId == 43 && DetailFailuresRemaining-- > 0)
                 throw new ImportSourceException("Controlled detail failure.", true, RetryAfter);
             return Task.FromResult<ImportedMovieDto?>(new ImportedMovieDto(tmdbId, Title, "Overview", 90,
-                new DateOnly(2020, 1, 1), 100, [new ImportedGenreDto(1, GenreName)]));
+                new DateOnly(2020, 1, 1), 100, [new ImportedGenreDto(1, GenreName)], PosterPath));
         }
     }
 
@@ -309,6 +311,7 @@ public sealed class ImportWorkflowTests
         }
         public void Advance(TimeSpan duration)
         {
+        public string? PosterPath { get; set; } = "/first-poster.jpg";
             _now += duration;
         }
     }

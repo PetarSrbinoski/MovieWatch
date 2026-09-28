@@ -48,6 +48,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             movie.Property(m => m.Title).HasMaxLength(200).IsRequired();
             movie.Property(m => m.Overview).HasMaxLength(4000);
             movie.HasIndex(m => m.TmdbId).IsUnique();
+            movie.Property(m => m.PosterPath).HasMaxLength(255);
             movie.Navigation(m => m.MovieGenres).AutoInclude();
         });
         builder.Entity<MovieGenre>(link =>

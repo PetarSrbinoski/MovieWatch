@@ -12,5 +12,6 @@ public record ImportedMovieDto(
     int? RuntimeMinutes,
     DateOnly? ReleaseDate,
     int VoteCount,
-    IReadOnlyList<ImportedGenreDto> Genres
+    IReadOnlyList<ImportedGenreDto> Genres,
+    string? PosterPath = null
     );
