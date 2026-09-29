@@ -221,7 +221,7 @@ public sealed class CoreWorkflowTests
         });
         var group = await CreateAsync(ana, "/api/groups", new { name = "Friends", description = "" });
         var member = await CreateAsync(ana, $"/api/groups/{Id(group)}/members", new { viewerId = Id(borisProfile) });
-        var query = $"/api/groups/{Id(group)}/recommendations?moodId={Id(mood)}&maximumRuntimeMinutes=120";
+        var query = $"/api/groups/{Id(group)}/recommendations?moodId={Id(mood)}&maximumRuntimeMinutes=120&includeOtherOptions=true";
         var shared = await ana.GetFromJsonAsync<JsonElement>(query);
         var recommendation = shared.GetProperty("recommendations").EnumerateArray().Single();
         Assert.Equal(0, recommendation.GetProperty("score").GetDouble());

@@ -3,7 +3,8 @@ namespace MovieWatch.Web.Response;
 public record GenreContributionResponse(
     Guid GenreId,
     string GenreName,
-    int Weight
+    int Weight,
+    bool IsPersonal
     );
 
 public record MemberScoreResponse(
@@ -23,5 +24,10 @@ public record RecommendationResultResponse(
     MoodResponse Mood,
     DateTimeOffset GeneratedAt,
     IReadOnlyList<RecommendationResponse> Recommendations,
-    IReadOnlyList<Guid> ParticipatingViewerIds
+    IReadOnlyList<Guid> ParticipatingViewerIds,
+    int PositiveMatchCount,
+    int OtherOptionCount,
+    int Skip,
+    int Limit,
+    int TotalCount
     );

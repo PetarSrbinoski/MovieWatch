@@ -22,6 +22,8 @@ public sealed class WorkbookExportService : IWorkbookExportService
         Text(sheet, 6, 1, "Generated (UTC)");
         Text(sheet, 6, 2, result.GeneratedAt.UtcDateTime.ToString("O"));
         Text(sheet, 7, 1, "This product uses the TMDB API but is not endorsed or certified by TMDB.");
+        Text(sheet, 8, 1, "Include other options");
+        Text(sheet, 8, 2, result.Query.IncludeOtherOptions ? "Yes" : "No — positive matches only");
         var headers = new List<string> { "Title", "Runtime (minutes)", "Genres", "Score", "Explanation" };
         headers.AddRange(result.ParticipatingViewerIds.Select(id => $"Member {id} score"));
         for (var column = 0; column < headers.Count; column++)

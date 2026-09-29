@@ -5,13 +5,16 @@ public record RecommendationQueryDto(
     int MaximumRuntimeMinutes,
     IReadOnlyList<Guid> GenreIds,
     bool IncludeWatched = false,
-    int Limit = 20
+    int Limit = 6,
+    bool IncludeOtherOptions = false,
+    int Skip = 0
     );
 
 public record GenreContributionDto(
     Guid GenreId,
     string GenreName,
-    int Weight
+    int Weight,
+    bool IsPersonal = false
     );
 
 public record MemberScoreDto(
@@ -32,5 +35,7 @@ public record RecommendationResultDto(
     RecommendationQueryDto Query,
     DateTimeOffset GeneratedAt,
     IReadOnlyList<RecommendationDto> Recommendations,
-    IReadOnlyList<Guid> ParticipatingViewerIds
+    IReadOnlyList<Guid> ParticipatingViewerIds,
+    int PositiveMatchCount,
+    int OtherOptionCount
     );

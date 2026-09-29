@@ -42,15 +42,17 @@ public static class RecommendationMappingExtensions
     public static RecommendationQueryDto ToDto(this RecommendationRequest request)
     {
         return new(request.MoodId, request.MaximumRuntimeMinutes, request.GenreIds,
-            request.IncludeWatched, request.Limit);
+            request.IncludeWatched, request.Limit, request.IncludeOtherOptions, request.Skip);
     }
 
     public static RecommendationResultResponse ToResponse(this RecommendationResultDto dto)
     {
         return new(dto.Mood.ToResponse(), dto.GeneratedAt, dto.Recommendations.Select(r =>
             new RecommendationResponse(r.Movie.ToResponse(), r.Score, r.Explanation,
-                r.GenreContributions.Select(c => new GenreContributionResponse(c.GenreId, c.GenreName, c.Weight)).ToArray(),
+                r.GenreContributions.Select(c => new GenreContributionResponse(c.GenreId, c.GenreName, c.Weight, c.IsPersonal)).ToArray(),
                 r.MemberScores.Select(m => new MemberScoreResponse(m.ViewerId, m.Score)).ToArray())).ToArray(),
-            dto.ParticipatingViewerIds);
+            dto.ParticipatingViewerIds, dto.PositiveMatchCount, dto.OtherOptionCount,
+            dto.Query.Skip, dto.Query.Limit,
+            dto.PositiveMatchCount + (dto.Query.IncludeOtherOptions ? dto.OtherOptionCount : 0));
     }
 }

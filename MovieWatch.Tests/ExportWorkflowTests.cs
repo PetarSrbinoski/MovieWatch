@@ -44,7 +44,7 @@ public sealed class ExportWorkflowTests
         {
             genreId = Id(genre), moodId = Id(mood), weight = -2
         });
-        var query = $"moodId={Id(mood)}&maximumRuntimeMinutes=100";
+        var query = $"moodId={Id(mood)}&maximumRuntimeMinutes=100&includeOtherOptions=true";
         using var personal = await WorkbookAsync(ana,
             $"/api/viewers/{Id(anaProfile)}/recommendations.xlsx?{query}");
         var sheet = personal.Worksheet("Recommendations");
