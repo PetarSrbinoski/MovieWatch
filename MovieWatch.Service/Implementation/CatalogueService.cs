@@ -45,6 +45,8 @@ public sealed class CatalogueService(
         await genres.DeleteAsync(genre, cancellationToken);
     }
 
+    public IReadOnlyList<MoodPresetDto> ListMoodPresets() => MoodPresets.All;
+
     public async Task<List<MoodDto>> ListMoodsAsync(int skip, int take, CancellationToken cancellationToken)
     {
         Pagination.Validate(skip, take);
@@ -57,14 +59,15 @@ public sealed class CatalogueService(
         return ToDto(await RequireMood(id, cancellationToken));
     }
 
-    public async Task<MoodDto> CreateMoodAsync(string name, string description, CancellationToken cancellationToken)
+    public async Task<MoodDto> CreateMoodAsync(string name, string description, CancellationToken cancellationToken, string? presetKey = null)
     {
-        return ToDto(await moods.InsertAsync(new Mood(CleanName(name), CleanDescription(description)), cancellationToken));
+        return ToDto(await moods.InsertAsync(new Mood(CleanName(name), CleanDescription(description)) { PresetKey = MoodPresets.ValidateKey(presetKey) }, cancellationToken));
     }
 
-    public async Task<MoodDto> UpdateMoodAsync(Guid id, string name, string description, CancellationToken cancellationToken)
+    public async Task<MoodDto> UpdateMoodAsync(Guid id, string name, string description, CancellationToken cancellationToken, string? presetKey = null)
     {
         var mood = await moods.FindAsync(m => m.Id == id, cancellationToken) ?? throw Missing("Mood");
+        mood.PresetKey = MoodPresets.ValidateKey(presetKey);
         mood.Name = CleanName(name);
         mood.Description = CleanDescription(description);
         await moods.SaveAsync(cancellationToken);
@@ -151,7 +154,7 @@ public sealed class CatalogueService(
     }
     private static MoodDto ToDto(Mood mood)
     {
-        return new(mood.Id, mood.Name, mood.Description);
+        return MoodPresets.ToDto(mood);
     }
     private static OperationException Missing(string type)
     {

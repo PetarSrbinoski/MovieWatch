@@ -9,8 +9,13 @@ public record GenreDto(
 public record MoodDto(
     Guid Id,
     string Name,
-    string Description
+    string Description,
+    string? PresetKey = null,
+    IReadOnlyList<MoodGenreWeightDto>? DefaultWeights = null
     );
+
+public record MoodGenreWeightDto(string GenreName, long TmdbId, int Weight);
+public record MoodPresetDto(string Key, string Name, string Description, IReadOnlyList<MoodGenreWeightDto> DefaultWeights);
 
 public record MovieDto(
     Guid Id,

@@ -16,6 +16,9 @@ public sealed class MoodsController(CatalogueMapper mapper) : ControllerBase
         return Ok((await mapper.ListMoodsAsync(skip, take, cancellationToken)).Select(m => m.ToResponse()));
     }
 
+    [HttpGet("presets")]
+    public ActionResult<List<MoodPresetResponse>> Presets() => Ok(mapper.ListMoodPresets().Select(p => p.ToResponse()).ToList());
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<MoodResponse>> Get(Guid id, CancellationToken cancellationToken)
     {

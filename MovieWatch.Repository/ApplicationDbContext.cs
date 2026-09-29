@@ -41,14 +41,15 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         {
             mood.Property(m => m.Name).HasMaxLength(100).IsRequired();
             mood.Property(m => m.Description).HasMaxLength(1000);
+            mood.Property(m => m.PresetKey).HasMaxLength(40);
             mood.HasIndex(m => m.Name).IsUnique();
         });
         builder.Entity<Movie>(movie =>
         {
             movie.Property(m => m.Title).HasMaxLength(200).IsRequired();
             movie.Property(m => m.Overview).HasMaxLength(4000);
-            movie.HasIndex(m => m.TmdbId).IsUnique();
             movie.Property(m => m.PosterPath).HasMaxLength(255);
+            movie.HasIndex(m => m.TmdbId).IsUnique();
             movie.Navigation(m => m.MovieGenres).AutoInclude();
         });
         builder.Entity<MovieGenre>(link =>

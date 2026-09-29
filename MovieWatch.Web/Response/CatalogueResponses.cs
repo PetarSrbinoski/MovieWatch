@@ -9,8 +9,13 @@ public record GenreResponse(
 public record MoodResponse(
     Guid Id,
     string Name,
-    string Description
+    string Description,
+    string? PresetKey = null,
+    IReadOnlyList<MoodGenreWeightResponse>? DefaultWeights = null
     );
+
+public record MoodGenreWeightResponse(string GenreName, long TmdbId, int Weight);
+public record MoodPresetResponse(string Key, string Name, string Description, IReadOnlyList<MoodGenreWeightResponse> DefaultWeights);
 
 public record MovieResponse(
     Guid Id,

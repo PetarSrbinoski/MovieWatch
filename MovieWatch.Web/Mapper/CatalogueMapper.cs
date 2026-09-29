@@ -32,6 +32,8 @@ public sealed class CatalogueMapper(ICatalogueService catalogue, ICatalogueSyncS
     {
         return catalogue.DeleteGenreAsync(id, cancellationToken);
     }
+    public IReadOnlyList<MoodPresetDto> ListMoodPresets() => catalogue.ListMoodPresets();
+
     public Task<List<MoodDto>> ListMoodsAsync(int skip, int take, CancellationToken cancellationToken)
     {
         return catalogue.ListMoodsAsync(skip, take, cancellationToken);
@@ -42,11 +44,11 @@ public sealed class CatalogueMapper(ICatalogueService catalogue, ICatalogueSyncS
     }
     public Task<MoodDto> CreateMoodAsync(MoodRequest request, CancellationToken cancellationToken)
     {
-        return catalogue.CreateMoodAsync(request.Name, request.Description, cancellationToken);
+        return catalogue.CreateMoodAsync(request.Name, request.Description, cancellationToken, request.PresetKey);
     }
     public Task<MoodDto> UpdateMoodAsync(Guid id, MoodRequest request, CancellationToken cancellationToken)
     {
-        return catalogue.UpdateMoodAsync(id, request.Name, request.Description, cancellationToken);
+        return catalogue.UpdateMoodAsync(id, request.Name, request.Description, cancellationToken, request.PresetKey);
     }
     public Task DeleteMoodAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -82,8 +84,11 @@ public static class CatalogueMappingExtensions
     }
     public static MoodResponse ToResponse(this MoodDto dto)
     {
-        return new(dto.Id, dto.Name, dto.Description);
+        return new(dto.Id, dto.Name, dto.Description, dto.PresetKey, dto.DefaultWeights?.Select(ToResponse).ToArray());
     }
+    public static MoodGenreWeightResponse ToResponse(this MoodGenreWeightDto dto) => new(dto.GenreName, dto.TmdbId, dto.Weight);
+    public static MoodPresetResponse ToResponse(this MoodPresetDto dto) => new(dto.Key, dto.Name, dto.Description, dto.DefaultWeights.Select(ToResponse).ToArray());
+
     public static MovieResponse ToResponse(this MovieDto dto)
     {
         return new(dto.Id, dto.Title, dto.Overview,

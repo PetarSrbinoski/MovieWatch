@@ -8,7 +8,8 @@ public record GenreRequest(
 
 public record MoodRequest(
     [Required, MaxLength(100)] string Name,
-    [MaxLength(1000)] string Description
+    [MaxLength(1000)] string Description,
+    [MaxLength(40)] string? PresetKey = null
     );
 
 public record MovieRequest(

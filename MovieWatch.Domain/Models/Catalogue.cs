@@ -15,6 +15,7 @@ public sealed class Genre : BaseAuditableEntity
 
 public sealed class Mood : BaseAuditableEntity
 {
+    public string? PresetKey { get; set; }
     public Mood(string name, string description)
     {
         Name = name;
@@ -40,8 +41,8 @@ public sealed class Movie : BaseAuditableEntity
     public long? TmdbId { get; set; }
     public int VoteCount { get; set; }
     public DateTimeOffset? LastImportedAt { get; set; }
-    public List<MovieGenre> MovieGenres { get; set; } = [];
     public string? PosterPath { get; set; }
+    public List<MovieGenre> MovieGenres { get; set; } = [];
 }
 
 public sealed class MovieGenre
