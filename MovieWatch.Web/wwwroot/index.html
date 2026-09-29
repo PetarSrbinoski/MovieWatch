@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#111115" />
+    <meta name="theme-color" content="#141413" />
     <meta
       name="description"
       content="Find your next great watch. Personal and group movie recommendations that fit your mood and your evening."
@@ -11,7 +11,7 @@
     <title>Discover · MovieWatch</title>
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23ee956d'/%3E%3Cpath d='m16 11 14 9-14 9z' fill='%23111115'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23e9b568'/%3E%3Cpath d='m16 11 14 9-14 9z' fill='%23111115'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="./app.css" />
     <script src="./app.js" defer></script>
@@ -20,7 +20,7 @@
     <a href="#main" class="skip-link">Skip to content</a>
     <div class="workspace">
       <header class="topbar">
-        <a class="brand" href="#discover">MovieWatch</a>
+        <a class="brand" href="#discover" aria-label="MovieWatch home"><span class="brand-mark" aria-hidden="true">▶</span>MovieWatch<span class="brand-dot">.</span></a>
         <span id="page-label" class="sr-only">Recommendations</span>
         <div class="topbar-actions">
           <button
@@ -30,12 +30,12 @@
             aria-expanded="false"
             aria-controls="main-navigation"
           >
-            Menu
+            <span data-icon="menu"></span>More
           </button>
           <button id="login-button" class="button primary" type="button">
             Sign in
           </button>
-          <a id="profile-link" class="button ghost" href="#profile" hidden
+          <a id="profile-link" class="button ghost" href="#profile" data-route="profile" hidden
             >Profile</a
           >
           <button id="logout" class="button ghost" type="button" hidden>
@@ -44,14 +44,14 @@
         </div>
       </header>
       <nav id="main-navigation" aria-label="Main navigation">
-        <a href="#discover" data-route="discover">Recommend</a>
-        <a href="#catalogue" data-route="catalogue">Movies</a>
+        <a href="#discover" data-route="discover"><span data-icon="sparkles"></span>Discover</a>
+        <a href="#catalogue" data-route="catalogue"><span data-icon="film"></span>Catalogue</a>
         <a href="#watchlist" data-route="watchlist"
-          >Watchlist <span id="watchlist-count" class="nav-count">0</span></a
+          ><span data-icon="bookmark"></span>Watchlist <span id="watchlist-count" class="nav-count">0</span></a
         >
-        <a href="#groups" data-route="groups">Groups</a>
-        <a href="#preferences" data-route="preferences">Preferences</a>
-        <a href="#admin" data-route="admin" class="admin-only" hidden>Manage</a>
+        <a href="#groups" data-route="groups"><span data-icon="users"></span>Groups</a>
+        <a href="#preferences" data-route="preferences"><span data-icon="sliders"></span>Preferences</a>
+        <a href="#admin" data-route="admin" class="admin-only" hidden><span data-icon="database"></span>Manage</a>
       </nav>
       <main id="main" tabindex="-1">
         <section
@@ -59,10 +59,11 @@
           class="page"
           aria-labelledby="discover-title"
         >
-          <div class="page-heading">
+          <div class="page-heading discovery-heading">
             <div>
-              <h1 id="discover-title">Find a movie</h1>
-              <p>Find a few good matches for tonight.</p>
+              <p class="eyebrow">A good night starts with a good movie</p>
+              <h1 id="discover-title">What should we watch<span> tonight?</span></h1>
+              <p>Your mood. Your time. A few movies worth settling in for.</p>
             </div>
           </div>
           <div id="setup-status" class="info-banner" hidden></div>
@@ -70,57 +71,45 @@
             class="panel recommendation-panel"
             aria-labelledby="finder-title"
           >
-            <div class="section-heading">
-              <div>
-                <h2 id="finder-title">
-                  <span data-icon="sliders"></span>What do you want to watch tonight?
-                </h2>
-                <p>Pick a viewing mood. Results update as you adjust your choices.</p>
-              </div>
-            </div>
             <form id="recommend-form">
-              <div class="finder-fields">
-                <label
-                  >Watching with<select name="scope">
+              <div class="finder-topline">
+                <h2 id="finder-title">Set the scene</h2>
+                <div class="viewing-scope">
+                  <label for="watching-scope"><span data-icon="users"></span>Watching with</label>
+                  <select id="watching-scope" name="scope">
                     <option value="personal">Just me</option>
                     <option value="group">My group</option>
-                  </select></label
-                ><label id="recommend-group-field" hidden
-                  >Choose a group<select
-                    name="groupId"
-                    class="group-select"
-                  ></select></label
-                ><label
-                  >Tonight I want to…<select name="moodId" class="mood-select" required>
+                  </select>
+                  <label id="recommend-group-field" hidden>Choose a group
+                    <select name="groupId" class="group-select"></select>
+                  </label>
+                </div>
+              </div>
+              <p id="group-guidance" class="form-hint" hidden></p>
+              <div class="finder-fields">
+                <label class="mood-field"><span class="field-caption"><span class="step-number">01</span>What are you in the mood for?</span>
+                  <select name="moodId" class="mood-select" required aria-describedby="mood-description">
                     <option value="">Sign in to choose a mood</option>
-                  </select></label
-                ><label
-                  >Maximum runtime<span class="input-unit"
-                    ><input
-                      name="maximumRuntimeMinutes"
-                      type="number"
-                      min="1"
-                      max="1440"
-                      value="120"
-                      required
-                    /><span>minutes</span></span
-                  ></label
-                ><button class="button primary find-button" type="submit">
-                  <span data-icon="sparkles"></span>Find movies
-                </button>
+                  </select>
+                </label>
+                <div class="runtime-field">
+                  <label for="maximum-runtime"><span class="field-caption"><span class="step-number">02</span>How much time do you have?</span></label>
+                  <div class="runtime-controls">
+                    <div class="runtime-presets" role="group" aria-label="Quick runtime limits">
+                      <button type="button" data-runtime="90" aria-pressed="false">90 min</button>
+                      <button type="button" data-runtime="120" aria-pressed="true">2 hrs</button>
+                      <button type="button" data-runtime="180" aria-pressed="false">3 hrs</button>
+                    </div>
+                    <span class="input-unit"><input id="maximum-runtime" name="maximumRuntimeMinutes" type="number" min="1" max="1440" value="120" required aria-label="Maximum runtime in minutes" /><span>min max</span></span>
+                  </div>
+                </div>
+                <button class="button primary find-button" type="submit"><span data-icon="sparkles"></span><span id="find-label">Find my movies</span><span data-icon="arrow"></span></button>
               </div>
               <p id="mood-description" class="muted"></p>
-              <details id="mood-adjustments" class="advanced">
-                <summary>Adjust this mood</summary>
-                <p class="muted">Your changes apply to this mood only. Avoid lowers a movie’s rank; it does not ban it. In a group, each viewer contributes equally.</p>
-                <div id="mood-weights" class="mood-weights"></div>
-              </details>
-              <details class="advanced">
-                <summary>
-                  More filters
-                  <span>Genres, watched movies & page size</span>
-                </summary>
+              <details id="discovery-options" class="advanced">
+                <summary>Fine-tune your picks <span id="filter-summary">Optional filters & mood preferences</span></summary>
                 <div class="advanced-content">
+                  <div class="section-heading"><p class="muted">Keep it broad, or narrow things down.</p><button id="reset-filters" class="button text-button small" type="button">Reset filters</button></div>
                   <fieldset>
                     <legend>
                       Genres
@@ -147,20 +136,27 @@
                     >
                   </div>
                 </div>
+                <details id="mood-adjustments" class="advanced">
+                  <summary>Adjust this mood</summary>
+                  <p class="muted">Your changes apply to this mood only. Avoid lowers a movie’s rank; it does not ban it. In a group, each viewer contributes equally.</p>
+                  <div id="mood-weights" class="mood-weights"></div>
+                </details>
               </details>
+              <p id="finder-hint" class="finder-hint"><span data-icon="refresh"></span>Pick a mood to begin. Matches update as you make changes.</p>
             </form>
           </section>
           <div class="section-heading results-heading">
             <div>
-              <h2 id="results-title">Recommendations</h2>
+              <p class="eyebrow">Your next watch</p>
+              <h2 id="results-title">Picked for your evening</h2>
             </div>
-            <button class="button ghost small" id="export" type="button" hidden>
-              <span data-icon="download"></span>Export this page
+            <button class="button ghost small" id="export" type="button" aria-label="Export this page as Excel" hidden>
+              <span data-icon="download"></span>Export picks
             </button>
           </div>
           <p id="match-summary" class="muted" role="status"></p>
-          <button id="other-options" class="button ghost" type="button" hidden>Show other options</button>
           <div id="recommendations" class="movie-grid" aria-live="polite"></div>
+          <div class="other-options-row"><button id="other-options" class="button ghost" type="button" hidden>Show other options</button></div>
           <nav id="recommendation-pagination" class="pagination" aria-label="Movie result pages" hidden>
             <button id="recommendation-previous" class="button ghost small" type="button">Previous</button>
             <span id="recommendation-page" class="muted" role="status"></span>
@@ -175,7 +171,7 @@
         >
           <div class="page-heading">
             <div>
-              <h1 id="catalogue-title">Movies</h1>
+              <h1 id="catalogue-title">The catalogue</h1>
               <p>Search movies and save them to your watchlist.</p>
             </div>
             <button class="button ghost" type="button" id="refresh-catalogue">
@@ -211,10 +207,10 @@
           <div class="page-heading">
             <div>
               <h1 id="watchlist-title">Watchlist</h1>
-              <p>Saved movies, viewing status, and notes.</p>
+              <p>Good movies, kept for a good night.</p>
             </div>
-            <a href="#catalogue" class="button primary"
-              ><span data-icon="plus"></span>Find movies to save</a
+            <a href="#discover" class="button primary"
+              ><span data-icon="sparkles"></span>Discover movies</a
             >
           </div>
           <div class="tabs" id="watchlist-tabs" aria-label="Filter watchlist">
@@ -269,7 +265,7 @@
               <h2>Add preference</h2>
               <p class="muted">Tell us how a genre fits a particular mood.</p>
               <label
-                >When I’m feeling<select
+                >For this mood<select
                   name="moodId"
                   class="mood-select"
                   required
@@ -292,7 +288,7 @@
                 Save preference
               </button>
               <p class="form-hint">
-                Unset preferences are neutral. You can change your mind anytime.
+                Mood presets are your starting point. Saved preferences override them, including Neutral.
               </p>
             </form>
             <div>
@@ -413,6 +409,7 @@
               <p>Update your details or copy your ID to join a group.</p>
             </div>
           </div>
+          <button id="profile-signout" type="button" class="button ghost profile-signout">Sign out</button>
           <form id="profile-form" class="panel profile-form">
             <label
               >Display name<input

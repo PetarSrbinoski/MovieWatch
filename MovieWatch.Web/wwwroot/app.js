@@ -108,7 +108,7 @@ const state = {
 };
 const routeNames = {
   discover: "Discover",
-  catalogue: "Movies",
+  catalogue: "Catalogue",
   watchlist: "Watchlist",
   groups: "Groups",
   preferences: "Preferences",
@@ -186,6 +186,7 @@ function sessionUI() {
   $("#login-button").hidden = !!state.viewer;
   $("#logout").hidden = !state.viewer;
   $("#profile-link").hidden = !state.viewer;
+  syncFinder();
   $$(".admin-only").forEach((node) => {
     node.hidden = !state.admin;
   });
@@ -205,7 +206,7 @@ function signOut() {
     admin: false,
     genres: [],
     moods: [],
-  moodPresets: [],
+    moodPresets: [],
     movies: [],
     preferences: [],
     watchlist: [],
@@ -221,8 +222,11 @@ function signOut() {
   $("#profile-form").reset();
   $("#viewer-id").textContent = "";
   sessionUI();
+  $("#recommend-form").reset();
+  $("#discovery-options").open = false;
   fillControls();
   renderAll();
+  location.hash = "discover";
   navigate();
 }
 function navigate() {
@@ -274,7 +278,7 @@ window.addEventListener("hashchange", () => {
   $("#main").focus({ preventScroll: true });
 });
 $("#login-button").onclick = () => openAuth();
-$("#logout").onclick = () => {
+$("#logout").onclick = $("#profile-signout").onclick = () => {
   signOut();
   notice("Signed out.");
 };
@@ -398,6 +402,8 @@ function fillControls() {
     $("#recommend-genres").append(
       el("span", "No genres available yet.", "muted"),
     );
+  syncFinder();
+  renderMoodAdjustments();
 }
 async function refreshCatalogue() {
   const generation = state.generation;
@@ -444,6 +450,7 @@ async function refreshGroups() {
     fillSelect(select, state.groups, "Choose a group"),
   );
   renderGroups();
+  syncFinder();
 }
 async function refreshViewers() {
   const generation = state.generation;
@@ -546,9 +553,18 @@ function genreTags(movie) {
 }
 function saveButton(movie) {
   const saved = state.watchlist.find((entry) => entry.movieId === movie.id);
-  return saved
-    ? link(saved.status === "Watched" ? "✓ Watched" : "✓ Saved", "#watchlist")
-    : button("Save", () => saveMovie(movie), "button ghost small", "plus");
+  const control = saved
+    ? link(saved.status === "Watched" ? "Watched" : "In watchlist", "#watchlist", "button saved small save-button")
+    : button("Watchlist", () => saveMovie(movie), "button ghost small save-button", "plus");
+  if (saved) {
+    control.prepend(icon("check"));
+    // A link inside a modal must close it before navigating behind it.
+    control.addEventListener("click", () => $("#detail-dialog").close());
+  }
+  control.setAttribute("aria-label", saved
+    ? `Open watchlist: ${movie.title} is ${saved.status === "Watched" ? "watched" : "saved"}`
+    : `Add ${movie.title} to watchlist`);
+  return control;
 }
 async function saveMovie(movie) {
   if (!requireAccount()) return;
@@ -564,8 +580,10 @@ async function saveMovie(movie) {
 function movieThumbnail(movie) {
   const thumbnail = el("div", "", "movie-thumbnail");
   thumbnail.setAttribute("aria-hidden", "true");
-  const fallback = () =>
-    thumbnail.replaceChildren(icon("film"), el("span", "No poster"));
+  const fallback = () => {
+    thumbnail.classList.add("poster-fallback");
+    thumbnail.replaceChildren(icon("film"), el("span", movie.title, "poster-title"), el("span", "Poster unavailable", "poster-caption"));
+  };
   if (
     !/^\/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp)$/i.test(movie.posterPath || "")
   ) {
@@ -574,35 +592,42 @@ function movieThumbnail(movie) {
   }
   const image = el("img");
   image.alt = "";
-  image.width = 96;
-  image.height = 144;
+  image.width = 342;
+  image.height = 513;
   image.loading = "lazy";
   image.decoding = "async";
-  image.src = `https://image.tmdb.org/t/p/w185${movie.posterPath}`;
+  image.src = `https://image.tmdb.org/t/p/w342${movie.posterPath}`;
   image.addEventListener("error", fallback, { once: true });
   thumbnail.append(image);
   return thumbnail;
 }
+function shortMatchReason(recommendation) {
+  if (recommendation.score <= 0) return "An alternative beyond your positive mood matches.";
+  if (recommendation.memberScores.length)
+    return `Based on ${recommendation.memberScores.length} participating viewers’ combined preferences.`;
+  const favored = recommendation.genreContributions.filter((genre) => genre.weight > 0).map((genre) => genre.genreName);
+  return favored.length ? `${favored.slice(0, 2).join(" & ")}${favored.length > 2 ? " and more" : ""}: a fit for this mood.` : "A positive fit for your mood preferences.";
+}
 function movieCard(movie, recommendation, entry) {
   const card = el("article", "", "movie-card");
+  card.dataset.movieId = movie.id;
+  const poster = button("", () => showMovie(movie, recommendation), "movie-poster-button");
+  poster.setAttribute("aria-label", `View ${movie.title}`);
+  poster.append(movieThumbnail(movie));
+  if (recommendation) {
+    const positive = recommendation.score > 0;
+    poster.append(append(el("span", "", `movie-badge${positive ? " positive" : ""}`),
+      icon(positive ? "sparkles" : "film"), document.createTextNode(positive ? "Mood match" : "Other option")));
+  }
+  card.append(poster);
   const body = el("div", "", "movie-body");
-  append(
-    body,
-    append(
-      el("div", "", "movie-heading"),
-      movieThumbnail(movie),
-      append(
-        el("div", "", "movie-heading-text"),
-        el("h3", movie.title),
-        el("p", movieMeta(movie), "movie-meta"),
-        genreTags(movie),
-      ),
-    ),
+  append(body,
+    append(el("h3"), button(movie.title, () => showMovie(movie, recommendation), "movie-title-button")),
+    el("p", movieMeta(movie), "movie-meta"),
+    genreTags(movie),
   );
   if (recommendation)
-    body.append(
-      el("p", recommendation.explanation, "match-reason"),
-    );
+    body.append(append(el("p", "", "match-reason"), icon("sparkles"), el("span", shortMatchReason(recommendation))));
   if (entry)
     body.append(
       el(
@@ -637,12 +662,12 @@ function movieCard(movie, recommendation, entry) {
         "button ghost small",
         "check",
       ),
-      button("Edit", () => editWatchlist(entry, movie)),
+      button("Edit note", () => editWatchlist(entry, movie)),
     );
   } else
     append(
       actions,
-      button(recommendation ? "Why this movie?" : "Details", () =>
+      button(recommendation ? "Why it fits" : "Details", () =>
         showMovie(movie, recommendation),
       ),
       saveButton(movie),
@@ -731,24 +756,19 @@ function showMovie(movie, recommendation) {
   title.id = "detail-title";
   append(
     content,
+    movieThumbnail(movie),
     title,
     el("p", movieMeta(movie), "movie-meta"),
     genreTags(movie),
-    el(
-      "p",
-      movie.tmdbId
-        ? `Source: TMDB · ID ${movie.tmdbId}`
-        : "Source: manually added",
-      "muted",
-    ),
     el("p", movie.overview || "No overview is available for this movie yet."),
   );
   if (recommendation) {
     const box = el("div", "", "explanation");
     append(
       box,
-      el("h3", `Why this fits · score ${signedScore(recommendation.score)}`),
+      el("h3", recommendation.score > 0 ? "Why it fits" : "About this alternative"),
       el("p", recommendation.explanation),
+      el("p", `Mood score: ${signedScore(recommendation.score)}. Above zero is a positive match; this is not a movie rating.`, "form-hint"),
     );
     for (const contribution of recommendation.genreContributions)
       box.append(
@@ -766,7 +786,7 @@ function showMovie(movie, recommendation) {
             "span",
             member.viewerId === state.viewer.id
               ? "You"
-              : `Viewer ${index + 1} · ${member.viewerId.slice(0, 8)}`,
+              : viewerName(member.viewerId, `Viewer ${index + 1}`),
           ),
           el("strong", signedScore(member.score)),
         ),
@@ -798,6 +818,15 @@ function showMovie(movie, recommendation) {
       ),
     );
   content.append(actions);
+  append(content,
+    el(
+      "p",
+      movie.tmdbId
+        ? `Source: TMDB · ID ${movie.tmdbId}`
+        : "Source: manually added",
+      "movie-source",
+    ),
+  );
   if (!$("#detail-dialog").open) $("#detail-dialog").showModal();
 }
 function renderWatchlist() {
@@ -1011,10 +1040,49 @@ function recommendationPath(form) {
     .forEach((id) => query.append("genreIds", id));
   return `${path}/recommendations?${query}`;
 }
-$("#recommend-form").elements.scope.onchange = (event) => {
-  const group = event.target.value === "group";
+function syncFinder() {
+  const form = $("#recommend-form");
+  const group = form.elements.scope.value === "group";
+  $("#finder-hint").lastChild.textContent = !state.viewer
+    ? "Sign in to get personal picks, save movies, and watch together."
+    : form.elements.moodId.value ? "Matches update as you change your choices." : "Pick a mood to begin. Matches update automatically.";
   $("#recommend-group-field").hidden = !group;
-  $("#recommend-form").elements.groupId.required = group;
+  form.elements.groupId.required = group;
+  $("#find-label").textContent = !state.viewer ? "Sign in to find movies" : group ? "Find our movies" : "Find my movies";
+  $$("[data-runtime]").forEach((node) => node.setAttribute("aria-pressed", String(node.dataset.runtime === form.elements.maximumRuntimeMinutes.value)));
+  const filters = [];
+  const genreCount = form.querySelectorAll("[name=genreIds]:checked").length;
+  if (genreCount) filters.push(`${genreCount} ${genreCount === 1 ? "genre" : "genres"}`);
+  if (form.elements.includeWatched.checked) filters.push("including watched");
+  $("#filter-summary").textContent = filters.length ? filters.join(" · ") : "Optional filters & mood preferences";
+  const guidance = $("#group-guidance");
+  guidance.hidden = !group || !state.viewer;
+  guidance.replaceChildren();
+  if (guidance.hidden) return;
+  if (!state.groups.length) {
+    append(guidance, document.createTextNode("Bring your people together. "), link("Create a group", "#groups", "inline-link"));
+    return;
+  }
+  const selected = state.groups.find((value) => value.id === form.elements.groupId.value);
+  guidance.textContent = selected
+    ? `${selected.memberships.filter((member) => member.includedInRecommendations).length} participating viewers · Everyone’s preferences count equally.`
+    : "Choose a group. Everyone participating has an equal say.";
+}
+$("#recommend-form").elements.scope.onchange = syncFinder;
+$$("[data-runtime]").forEach((node) => {
+  node.onclick = () => {
+    $("#recommend-form").elements.maximumRuntimeMinutes.value = node.dataset.runtime;
+    syncFinder();
+    scheduleRecommendations();
+  };
+});
+$("#reset-filters").onclick = () => {
+  const form = $("#recommend-form");
+  form.querySelectorAll("[name=genreIds]").forEach((input) => { input.checked = false; });
+  form.elements.includeWatched.checked = false;
+  form.elements.limit.value = "6";
+  syncFinder();
+  scheduleRecommendations();
 };
 let recommendationVersion = 0;
 let recommendationTimer;
@@ -1034,13 +1102,17 @@ function scheduleRecommendations(resetOptions = true) {
   state.resultPath = "";
   renderRecommendations();
   const form = $("#recommend-form");
-  if (!state.viewer || !form.checkValidity()) return;
+  if (!state.viewer || !form.elements.moodId.value ||
+      (form.elements.scope.value === "group" && !form.elements.groupId.value) ||
+      !form.checkValidity()) return;
   $("#recommendations").replaceChildren(el("div", "Finding movies…", "loading-state loading"));
   recommendationTimer = setTimeout(() => loadRecommendations(form), 180);
 }
 async function loadRecommendations(form) {
   cancelRecommendations();
-  if (!state.viewer || !form.checkValidity()) return;
+  if (!state.viewer || !form.elements.moodId.value ||
+      (form.elements.scope.value === "group" && !form.elements.groupId.value) ||
+      !form.checkValidity()) return;
   const version = recommendationVersion;
   const generation = state.generation;
   const path = recommendationPath(form);
@@ -1072,10 +1144,14 @@ handle("#recommend-form", async (form) => {
   if (requireAccount()) await loadRecommendations(form);
 });
 $("#recommend-form").addEventListener("input", (event) => {
-  if (event.target.type === "number") scheduleRecommendations();
+  if (event.target.type === "number") {
+    syncFinder();
+    scheduleRecommendations();
+  }
 });
 $("#recommend-form").addEventListener("change", (event) => {
   if (event.target.closest("#mood-adjustments") || event.target.type === "number") return;
+  syncFinder();
   renderMoodAdjustments();
   scheduleRecommendations();
 });
@@ -1103,8 +1179,8 @@ function renderMoodAdjustments() {
   const mood = state.moods.find((m) => m.id === $("#recommend-form").elements.moodId.value);
   $("#mood-adjustments").hidden = !mood;
   $("#mood-description").textContent = mood
-    ? `${mood.description} ${mood.presetKey ? "Genre-based starting points; adjust them to your taste." : "Custom mood: add your genre preferences below to get matches."}`
-    : "Choose a mood to use its preset or adjust your preferences.";
+    ? (mood.presetKey ? mood.description : "Custom mood: open Fine-tune your picks to set your genre preferences.")
+    : "";
   $("#mood-weights").replaceChildren();
   if (!mood) return;
   if (!state.genres.length) {
@@ -1151,16 +1227,18 @@ function renderRecommendations() {
       "Sign in, choose your mood, and we’ll find movies that fit your time and taste.",
     )
   ) {
-    $("#results-title").textContent = "Recommendations";
+    $("#results-title").textContent = "Picked for your evening";
     return;
   }
   if (!state.result) {
-    $("#results-title").textContent = "Recommendations";
+    $("#results-title").textContent = "Picked for your evening";
     empty(
       "#recommendations",
-      "Choose your filters",
-      state.moods.length
-        ? "Choose a mood and runtime, then select Find movies."
+      $("#recommend-form").elements.scope.value === "group" && !$("#recommend-form").elements.groupId.value ? "Who’s watching tonight?" : "A mood is all it takes",
+      $("#recommend-form").elements.scope.value === "group" && !$("#recommend-form").elements.groupId.value
+        ? "Choose a group above, or create one in Groups to find a movie together."
+        : state.moods.length
+        ? "Choose your mood, set your time, and your movie picks will appear here."
         : "Your catalogue needs a mood to get started. An administrator can add moods in Manage.",
       "",
       null,
@@ -1170,20 +1248,22 @@ function renderRecommendations() {
   }
   const results = state.result.recommendations;
   $("#results-title").textContent =
-    `${state.result.mood.name} · ${results.length} ${results.length === 1 ? "pick" : "picks"}`;
+    $("#recommend-form").elements.scope.value === "group" ? "Picks for your group" : "Your picks for tonight";
   const positive = state.result.positiveMatchCount;
   const other = state.result.otherOptionCount;
   const { skip, limit, totalCount } = state.result;
   if (totalCount > 0) {
     $("#recommendation-pagination").hidden = false;
+    $("#recommendation-previous").hidden = totalCount <= limit;
+    $("#recommendation-next").hidden = totalCount <= limit;
     $("#recommendation-previous").disabled = skip === 0;
     $("#recommendation-next").disabled = skip + limit >= totalCount;
     $("#recommendation-page").textContent =
       `Page ${Math.floor(skip / limit) + 1} of ${Math.ceil(totalCount / limit)} · ${totalCount} movies`;
   }
   $("#match-summary").textContent = showOtherOptions
-    ? `${positive} positive matches and ${other} other options available. Other options may be neutral or lower-ranked for this mood.`
-    : `${positive} positive ${positive === 1 ? "match" : "matches"} in your catalogue within these filters.${positive < Number($("#recommend-form").elements.limit.value) ? " Adjust this mood or explore other options for more choices." : ""}`;
+    ? `${positive} mood matches · ${other} other options. Alternatives may be neutral or lower-ranked.`
+    : `${positive} ${positive === 1 ? "match" : "matches"} · ${state.result.mood.name} · Up to ${$("#recommend-form").elements.maximumRuntimeMinutes.value} min`;
   $("#other-options").hidden = !other;
   $("#other-options").textContent = showOtherOptions ? "Show positive matches only" : `Show other options (${other})`;
   if (!results.length) {
@@ -1351,8 +1431,9 @@ function renderGroups() {
           () => {
             const form = $("#recommend-form");
             form.elements.scope.value = "group";
-            form.elements.scope.dispatchEvent(new Event("change"));
             form.elements.groupId.value = group.id;
+            syncFinder();
+            scheduleRecommendations();
             location.hash = "discover";
             $("#recommend-form").scrollIntoView({ block: "center" });
           },
