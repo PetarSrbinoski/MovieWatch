@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#111115" />
+    <meta
+      name="description"
+      content="Find your next great watch. Personal and group movie recommendations that fit your mood and your evening."
+    />
+    <title>Discover · MovieWatch</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23ee956d'/%3E%3Cpath d='m16 11 14 9-14 9z' fill='%23111115'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./app.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="workspace">
+      <header class="topbar">
+        <a class="brand" href="#discover">MovieWatch</a>
+        <span id="page-label" class="sr-only">Recommendations</span>
+        <div class="topbar-actions">
+          <button
+            id="menu-toggle"
+            class="button ghost menu-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="main-navigation"
+          >
+            Menu
+          </button>
+          <button id="login-button" class="button primary" type="button">
+            Sign in
+          </button>
+          <a id="profile-link" class="button ghost" href="#profile" hidden
+            >Profile</a
+          >
+          <button id="logout" class="button ghost" type="button" hidden>
+            Sign out
+          </button>
+        </div>
+      </header>
+      <nav id="main-navigation" aria-label="Main navigation">
+        <a href="#discover" data-route="discover">Recommend</a>
+        <a href="#catalogue" data-route="catalogue">Movies</a>
+        <a href="#watchlist" data-route="watchlist"
+          >Watchlist <span id="watchlist-count" class="nav-count">0</span></a
+        >
+        <a href="#groups" data-route="groups">Groups</a>
+        <a href="#preferences" data-route="preferences">Preferences</a>
+        <a href="#admin" data-route="admin" class="admin-only" hidden>Manage</a>
+      </nav>
+      <main id="main" tabindex="-1">
+        <section
+          id="page-discover"
+          class="page"
+          aria-labelledby="discover-title"
+        >
+          <div class="page-heading">
+            <div>
+              <h1 id="discover-title">Find a movie</h1>
+              <p>Find a few good matches for tonight.</p>
+            </div>
+          </div>
+          <div id="setup-status" class="info-banner" hidden></div>
+          <section
+            class="panel recommendation-panel"
+            aria-labelledby="finder-title"
+          >
+            <div class="section-heading">
+              <div>
+                <h2 id="finder-title">
+                  <span data-icon="sliders"></span>What do you want to watch tonight?
+                </h2>
+                <p>Pick a viewing mood. Results update as you adjust your choices.</p>
+              </div>
+            </div>
+            <form id="recommend-form">
+              <div class="finder-fields">
+                <label
+                  >Watching with<select name="scope">
+                    <option value="personal">Just me</option>
+                    <option value="group">My group</option>
+                  </select></label
+                ><label id="recommend-group-field" hidden
+                  >Choose a group<select
+                    name="groupId"
+                    class="group-select"
+                  ></select></label
+                ><label
+                  >Tonight I want to…<select name="moodId" class="mood-select" required>
+                    <option value="">Sign in to choose a mood</option>
+                  </select></label
+                ><label
+                  >Maximum runtime<span class="input-unit"
+                    ><input
+                      name="maximumRuntimeMinutes"
+                      type="number"
+                      min="1"
+                      max="1440"
+                      value="120"
+                      required
+                    /><span>minutes</span></span
+                  ></label
+                ><button class="button primary find-button" type="submit">
+                  <span data-icon="sparkles"></span>Find movies
+                </button>
+              </div>
+              <p id="mood-description" class="muted"></p>
+              <details id="mood-adjustments" class="advanced">
+                <summary>Adjust this mood</summary>
+                <p class="muted">Your changes apply to this mood only. Avoid lowers a movie’s rank; it does not ban it. In a group, each viewer contributes equally.</p>
+                <div id="mood-weights" class="mood-weights"></div>
+              </details>
+              <details class="advanced">
+                <summary>
+                  More filters
+                  <span>Genres, watched movies & page size</span>
+                </summary>
+                <div class="advanced-content">
+                  <fieldset>
+                    <legend>
+                      Genres
+                      <span class="muted">· optional, match any selected</span>
+                    </legend>
+                    <div class="chip-options" id="recommend-genres">
+                      <span class="muted"
+                        >Your available genres will appear here.</span
+                      >
+                    </div>
+                  </fieldset>
+                  <div class="fields">
+                    <label
+                      >Results per page<input
+                        name="limit"
+                        type="number"
+                        min="1"
+                        max="50"
+                        value="6"
+                        required /></label
+                    ><label class="check"
+                      ><input name="includeWatched" type="checkbox" />Include
+                      movies already watched</label
+                    >
+                  </div>
+                </div>
+              </details>
+            </form>
+          </section>
+          <div class="section-heading results-heading">
+            <div>
+              <h2 id="results-title">Recommendations</h2>
+            </div>
+            <button class="button ghost small" id="export" type="button" hidden>
+              <span data-icon="download"></span>Export this page
+            </button>
+          </div>
+          <p id="match-summary" class="muted" role="status"></p>
+          <button id="other-options" class="button ghost" type="button" hidden>Show other options</button>
+          <div id="recommendations" class="movie-grid" aria-live="polite"></div>
+          <nav id="recommendation-pagination" class="pagination" aria-label="Movie result pages" hidden>
+            <button id="recommendation-previous" class="button ghost small" type="button">Previous</button>
+            <span id="recommendation-page" class="muted" role="status"></span>
+            <button id="recommendation-next" class="button ghost small" type="button">Next</button>
+          </nav>
+        </section>
+        <section
+          id="page-catalogue"
+          class="page"
+          hidden
+          aria-labelledby="catalogue-title"
+        >
+          <div class="page-heading">
+            <div>
+              <h1 id="catalogue-title">Movies</h1>
+              <p>Search movies and save them to your watchlist.</p>
+            </div>
+            <button class="button ghost" type="button" id="refresh-catalogue">
+              <span data-icon="refresh"></span>Refresh
+            </button>
+          </div>
+          <div class="toolbar">
+            <label class="search-field"
+              ><span data-icon="search"></span
+              ><input
+                id="movie-search"
+                type="search"
+                placeholder="Search movies by title or story…"
+                aria-label="Search movies" /></label
+            ><select id="catalogue-genre" aria-label="Filter movies by genre">
+              <option value="">All genres</option></select
+            ><select id="catalogue-sort" aria-label="Sort movies">
+              <option value="popular">Most popular</option>
+              <option value="newest">Newest releases</option>
+              <option value="title">Title A–Z</option>
+              <option value="shortest">Shortest first</option>
+            </select>
+          </div>
+          <p id="catalogue-count" class="muted"></p>
+          <div id="movies" class="movie-grid" aria-live="polite"></div>
+        </section>
+        <section
+          id="page-watchlist"
+          class="page"
+          hidden
+          aria-labelledby="watchlist-title"
+        >
+          <div class="page-heading">
+            <div>
+              <h1 id="watchlist-title">Watchlist</h1>
+              <p>Saved movies, viewing status, and notes.</p>
+            </div>
+            <a href="#catalogue" class="button primary"
+              ><span data-icon="plus"></span>Find movies to save</a
+            >
+          </div>
+          <div class="tabs" id="watchlist-tabs" aria-label="Filter watchlist">
+            <button type="button" data-filter="all" aria-pressed="true">
+              All movies</button
+            ><button type="button" data-filter="Planned" aria-pressed="false">
+              Want to watch</button
+            ><button type="button" data-filter="Watched" aria-pressed="false">
+              Watched
+            </button>
+          </div>
+          <div id="watchlist" class="movie-grid" aria-live="polite"></div>
+        </section>
+        <section
+          id="page-groups"
+          class="page"
+          hidden
+          aria-labelledby="groups-title"
+        >
+          <div class="page-heading">
+            <div>
+              <h1 id="groups-title">Groups</h1>
+              <p>Find movies for everyone in your group.</p>
+            </div>
+            <button class="button primary" type="button" id="create-group">
+              <span data-icon="plus"></span>Create a group
+            </button>
+          </div>
+          <div class="info-banner">
+            <span data-icon="users"></span>
+            <p>
+              Everyone participating has an equal say in recommendations. Opt
+              out when you’re sitting this one out.
+            </p>
+          </div>
+          <div id="groups" class="group-grid"></div>
+        </section>
+        <section
+          id="page-preferences"
+          class="page"
+          hidden
+          aria-labelledby="preferences-title"
+        >
+          <div class="page-heading">
+            <div>
+              <h1 id="preferences-title">Preferences</h1>
+              <p>Set which genres you prefer for each mood.</p>
+            </div>
+          </div>
+          <div class="split-layout">
+            <form class="panel" id="preference-form">
+              <h2>Add preference</h2>
+              <p class="muted">Tell us how a genre fits a particular mood.</p>
+              <label
+                >When I’m feeling<select
+                  name="moodId"
+                  class="mood-select"
+                  required
+                ></select></label
+              ><label
+                >This genre<select
+                  name="genreId"
+                  class="genre-select"
+                  required
+                ></select></label
+              ><label
+                >Sounds like<select name="weight">
+                  <option value="2">Love it (+2)</option>
+                  <option value="1" selected>Like it (+1)</option>
+                  <option value="0">Neutral (0)</option>
+                  <option value="-1">Not my first choice (−1)</option>
+                  <option value="-2">Not for this mood (−2)</option>
+                </select></label
+              ><button class="button primary" type="submit">
+                Save preference
+              </button>
+              <p class="form-hint">
+                Unset preferences are neutral. You can change your mind anytime.
+              </p>
+            </form>
+            <div>
+              <div class="section-heading">
+                <h2>Saved preferences</h2>
+                <span class="pill" id="preference-count">0 preferences</span>
+              </div>
+              <div id="preferences" class="stack"></div>
+            </div>
+          </div>
+        </section>
+        <section
+          id="page-admin"
+          class="page"
+          hidden
+          aria-labelledby="admin-title"
+        >
+          <div class="page-heading">
+            <div>
+              <h1 id="admin-title">Manage</h1>
+              <p>Import movies and manage catalogue data and accounts.</p>
+            </div>
+            <a class="button ghost" href="/swagger">API documentation ↗</a>
+          </div>
+          <div class="admin-grid">
+            <details class="panel management">
+              <summary>Viewers</summary>
+              <div class="section-heading">
+                <button type="button" id="create-viewer" class="button primary">
+                  Add viewer
+                </button>
+              </div>
+              <p class="muted">Manage viewer accounts.</p>
+              <div id="viewers" class="stack"></div>
+            </details>
+            <details class="panel management" open>
+              <summary>TMDB imports</summary>
+              <div class="section-heading">
+                <button
+                  class="button ghost small"
+                  type="button"
+                  id="refresh-imports"
+                  aria-label="Refresh import jobs"
+                >
+                  <span data-icon="refresh"></span>
+                </button>
+              </div>
+              <form id="import-form" class="inline-form">
+                <label
+                  >Discovery pages<input
+                    name="pageCount"
+                    type="number"
+                    min="1"
+                    max="5"
+                    value="1"
+                    required /></label
+                ><button class="button primary" type="submit">
+                  Queue import
+                </button>
+              </form>
+              <p class="form-hint">
+                Import 1–5 pages of popular movies. Progress refreshes
+                automatically while you’re here.
+              </p>
+              <div id="tmdb-setup" class="integration-status"></div>
+              <div id="imports" class="stack"></div>
+            </details>
+            <details class="panel management">
+              <summary>Movies</summary>
+
+              <p class="muted">
+                Create a movie manually, or open any movie to edit its details.
+              </p>
+              <button type="button" id="create-movie" class="button primary">
+                <span data-icon="plus"></span>Add movie
+              </button>
+            </details>
+            <details class="panel management">
+              <summary>Genres</summary>
+              <div class="section-heading">
+                <button
+                  type="button"
+                  id="create-genre"
+                  class="button small ghost"
+                >
+                  + Add genre
+                </button>
+              </div>
+              <button id="sync-genres" type="button" class="button primary">
+                Sync all genres from TMDB
+              </button>
+              <div id="genres" class="stack"></div>
+            </details>
+            <details class="panel management">
+              <summary>Moods</summary>
+              <div class="section-heading">
+                <button
+                  type="button"
+                  id="create-mood"
+                  class="button small ghost"
+                >
+                  + Add mood
+                </button>
+              </div>
+              <div id="moods" class="stack"></div>
+            </details>
+          </div>
+        </section>
+        <section
+          id="page-profile"
+          class="page"
+          hidden
+          aria-labelledby="profile-title"
+        >
+          <div class="page-heading">
+            <div>
+              <h1 id="profile-title">Profile</h1>
+              <p>Update your details or copy your ID to join a group.</p>
+            </div>
+          </div>
+          <form id="profile-form" class="panel profile-form">
+            <label
+              >Display name<input
+                name="displayName"
+                required
+                maxlength="100"
+                autocomplete="name" /></label
+            ><label
+              >Email<input
+                name="email"
+                type="email"
+                required
+                autocomplete="email" /></label
+            ><button class="button primary">Save changes</button>
+            <div class="viewer-id">
+              <strong>Your viewer ID</strong>
+              <p class="form-hint">
+                Share this with a group owner so they can add you.
+              </p>
+              <code id="viewer-id"></code
+              ><button type="button" class="button ghost small" id="copy-id">
+                Copy ID
+              </button>
+            </div>
+          </form>
+          <section class="panel profile-form danger-zone">
+            <h2>Delete my account</h2>
+            <p>
+              Your profile, preferences, watchlist, and memberships will be
+              removed. Transfer or delete any groups you own first.
+            </p>
+            <button id="delete-account" type="button" class="button danger">
+              Delete my account
+            </button>
+          </section>
+        </section>
+      </main>
+      <footer>
+        <a
+          href="https://www.themoviedb.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          ><img src="./tmdb-logo.svg" alt="TMDB" /></a
+        ><span
+          >This product uses the TMDB API but is not endorsed or certified by
+          TMDB.</span
+        >
+      </footer>
+    </div>
+    <dialog id="auth-dialog" aria-labelledby="auth-title">
+      <button
+        class="dialog-close"
+        type="button"
+        data-close
+        aria-label="Close dialog"
+      >
+        ×
+      </button>
+      <h2 id="auth-title">Sign in</h2>
+      <p class="muted" id="auth-description">
+        Access your movies, watchlist, and groups.
+      </p>
+      <div class="tabs" id="auth-tabs">
+        <button type="button" data-auth="login" aria-pressed="true">
+          Sign in</button
+        ><button type="button" data-auth="register" aria-pressed="false">
+          Create account
+        </button>
+      </div>
+      <form id="login-form">
+        <label
+          >Email<input
+            name="email"
+            type="email"
+            required
+            autocomplete="username" /></label
+        ><label
+          >Password<input
+            name="password"
+            type="password"
+            required
+            autocomplete="current-password"
+        /></label>
+        <p class="form-error" role="alert"></p>
+        <button class="button primary full" type="submit">
+          Sign in <span data-icon="arrow"></span>
+        </button>
+      </form>
+      <form id="register-form" hidden>
+        <label
+          >Display name<input
+            name="displayName"
+            required
+            maxlength="100"
+            autocomplete="name" /></label
+        ><label
+          >Email<input
+            name="email"
+            type="email"
+            required
+            autocomplete="email" /></label
+        ><label
+          >Password<input
+            name="password"
+            type="password"
+            minlength="8"
+            required
+            autocomplete="new-password"
+        /></label>
+        <p class="form-hint">
+          At least 8 characters, with uppercase, lowercase, a number, and a
+          symbol.
+        </p>
+        <p class="form-error" role="alert"></p>
+        <button class="button primary full" type="submit">
+          Create account <span data-icon="arrow"></span>
+        </button>
+      </form>
+    </dialog>
+    <dialog id="detail-dialog" aria-labelledby="detail-title">
+      <button
+        class="dialog-close"
+        type="button"
+        data-close
+        aria-label="Close dialog"
+      >
+        ×
+      </button>
+      <div id="detail-content"></div>
+    </dialog>
+    <dialog id="edit-dialog" aria-labelledby="edit-title">
+      <button
+        class="dialog-close"
+        type="button"
+        data-close
+        aria-label="Close dialog"
+      >
+        ×
+      </button>
+      <h2 id="edit-title"></h2>
+      <p id="edit-description" class="muted"></p>
+      <form id="edit-form">
+        <div id="edit-fields"></div>
+        <p class="form-error" role="alert"></p>
+        <div class="actions">
+          <button type="button" class="button ghost" data-close>Cancel</button
+          ><button class="button primary" type="submit" id="edit-submit">
+            Save changes
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <div id="notice" role="status" aria-live="polite" hidden>
+      <span id="notice-text"></span
+      ><button type="button" aria-label="Dismiss notification">×</button>
+    </div>
+    <noscript
+      ><div class="noscript">
+        Enable JavaScript to use MovieWatch.
+      </div></noscript
+    >
+  </body>
+</html>
