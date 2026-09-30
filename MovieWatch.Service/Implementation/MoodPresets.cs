@@ -28,9 +28,15 @@ public static class MoodPresets
             : throw new OperationException(FailureKind.Validation, "Unknown mood preset.");
     }
 
-    public static MoodDto ToDto(Mood mood) => new(mood.Id, mood.Name, mood.Description, mood.PresetKey,
-        All.SingleOrDefault(p => p.Key == mood.PresetKey)?.DefaultWeights ?? []);
+    public static MoodDto ToDto(Mood mood)
+    {
+        return new(mood.Id, mood.Name, mood.Description, mood.PresetKey,
+            All.SingleOrDefault(p => p.Key == mood.PresetKey)?.DefaultWeights ?? []);
+    }
 
-    public static int Weight(MoodDto mood, Genre genre) => mood.DefaultWeights?.FirstOrDefault(w =>
-        genre.TmdbId is { } id ? w.TmdbId == id : string.Equals(w.GenreName, genre.Name, StringComparison.OrdinalIgnoreCase))?.Weight ?? 0;
+    public static int Weight(MoodDto mood, Genre genre)
+    {
+        return mood.DefaultWeights?.FirstOrDefault(w =>
+            genre.TmdbId is { } id ? w.TmdbId == id : string.Equals(w.GenreName, genre.Name, StringComparison.OrdinalIgnoreCase))?.Weight ?? 0;
+    }
 }
