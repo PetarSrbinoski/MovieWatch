@@ -13,7 +13,7 @@ public sealed class IdentityRepository(
     UserManager<IdentityUser> users,
     IRepository<Viewer> viewers) : IIdentityRepository
 {
-    public async Task<ViewerDto> RegisterAsync(RegisterViewerDto registration, string role, CancellationToken cancellationToken = default)
+    public async Task<ViewerDto> RegisterAsync(RegisterViewerDto registration, AccountRole role, CancellationToken cancellationToken = default)
     {
         var account = new IdentityUser { UserName = registration.Email.Trim(), Email = registration.Email.Trim() };
         var viewer = new Viewer(account.Id, registration.DisplayName);
@@ -22,7 +22,7 @@ public sealed class IdentityRepository(
         {
             CheckResult(await users.CreateAsync(account, registration.Password));
             await viewers.InsertAsync(viewer, cancellationToken);
-            CheckResult(await users.AddToRoleAsync(account, role));
+            CheckResult(await users.AddToRoleAsync(account, role.ToString()));
             await transaction.CommitAsync(cancellationToken);
             return new ViewerDto(viewer.Id, account.Email, viewer.DisplayName);
         }
@@ -39,7 +39,9 @@ public sealed class IdentityRepository(
         if (account is null || !await users.CheckPasswordAsync(account, login.Password)
             || await viewers.GetAsync(v => v.AccountId == account.Id, cancellationToken) is null)
             return null;
-        return new AccountDto(account.Id, (await users.GetRolesAsync(account)).ToArray());
+        var assignedRoles = await users.GetRolesAsync(account);
+        return new AccountDto(account.Id, Enum.GetValues<AccountRole>()
+            .Where(role => assignedRoles.Contains(role.ToString(), StringComparer.Ordinal)).ToArray());
     }
 
     public async Task<ViewerDto?> GetProfileAsync(string accountId, CancellationToken cancellationToken = default)
@@ -54,11 +56,11 @@ public sealed class IdentityRepository(
         var existing = await users.FindByEmailAsync(registration.Email.Trim());
         if (existing is null)
         {
-            await RegisterAsync(registration, AccountRoles.Administrator, cancellationToken);
+            await RegisterAsync(registration, AccountRole.Administrator, cancellationToken);
             return;
         }
         // Bootstrap never elevates a public account that happened to claim the configured email.
-        if (!await users.IsInRoleAsync(existing, AccountRoles.Administrator)
+        if (!await users.IsInRoleAsync(existing, nameof(AccountRole.Administrator))
             || await viewers.GetAsync(v => v.AccountId == existing.Id, cancellationToken) is null)
             throw new OperationException(FailureKind.Conflict, "Administrator bootstrap requires an unused email or an existing administrator profile.");
     }
@@ -84,7 +86,7 @@ public sealed class IdentityRepository(
             ?? throw new OperationException(FailureKind.Validation, "Viewer was not found.");
         var account = await users.FindByIdAsync(viewer.AccountId)
             ?? throw new OperationException(FailureKind.Validation, "Account was not found.");
-        viewer.Rename(update.DisplayName);
+        viewer.DisplayName = update.DisplayName;
         if (string.IsNullOrWhiteSpace(update.Email))
             throw new OperationException(FailureKind.Validation, "Email is required.");
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
@@ -117,4 +119,5 @@ public sealed class IdentityRepository(
         throw new OperationException(FailureKind.Validation,
             string.Join(" ", result.Errors.Select(e => e.Description)));
     }
+
 }

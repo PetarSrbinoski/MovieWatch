@@ -19,7 +19,9 @@ public sealed class PersonalDataService(
     }
 
     public async Task<PreferenceDto> GetPreferenceAsync(ActorDto actor, Guid viewerId, Guid id, CancellationToken cancellationToken)
-        => ToDto(await FindPreferenceAsync(actor, viewerId, id, cancellationToken));
+    {
+        return ToDto(await FindPreferenceAsync(actor, viewerId, id, cancellationToken));
+    }
 
     public async Task<PreferenceDto> CreatePreferenceAsync(ActorDto actor, Guid viewerId, Guid genreId, Guid moodId,
         int weight, CancellationToken cancellationToken)
@@ -38,13 +40,15 @@ public sealed class PersonalDataService(
     {
         ValidateWeight(weight);
         var preference = await FindPreferenceAsync(actor, viewerId, id, cancellationToken);
-        preference.ChangeWeight(weight);
+        preference.Weight = weight;
         await preferences.SaveAsync(cancellationToken);
         return ToDto(preference);
     }
 
     public async Task DeletePreferenceAsync(ActorDto actor, Guid viewerId, Guid id, CancellationToken cancellationToken)
-        => await preferences.DeleteAsync(await FindPreferenceAsync(actor, viewerId, id, cancellationToken), cancellationToken);
+    {
+        await preferences.DeleteAsync(await FindPreferenceAsync(actor, viewerId, id, cancellationToken), cancellationToken);
+    }
 
     public async Task<List<WatchlistDto>> ListWatchlistAsync(ActorDto actor, Guid viewerId, CancellationToken cancellationToken)
     {
@@ -54,7 +58,9 @@ public sealed class PersonalDataService(
     }
 
     public async Task<WatchlistDto> GetWatchlistEntryAsync(ActorDto actor, Guid viewerId, Guid id, CancellationToken cancellationToken)
-        => ToDto(await FindWatchlistEntryAsync(actor, viewerId, id, cancellationToken));
+    {
+        return ToDto(await FindWatchlistEntryAsync(actor, viewerId, id, cancellationToken));
+    }
 
     public async Task<WatchlistDto> CreateWatchlistEntryAsync(ActorDto actor, Guid viewerId, Guid movieId,
         WatchStatus status, string note, CancellationToken cancellationToken)
@@ -72,13 +78,16 @@ public sealed class PersonalDataService(
     {
         ValidateWatchlist(status, note);
         var entry = await FindWatchlistEntryAsync(actor, viewerId, id, cancellationToken);
-        entry.Update(status, note.Trim());
+        entry.Status = status;
+        entry.Note = note.Trim();
         await watchlist.SaveAsync(cancellationToken);
         return ToDto(entry);
     }
 
     public async Task DeleteWatchlistEntryAsync(ActorDto actor, Guid viewerId, Guid id, CancellationToken cancellationToken)
-        => await watchlist.DeleteAsync(await FindWatchlistEntryAsync(actor, viewerId, id, cancellationToken), cancellationToken);
+    {
+        await watchlist.DeleteAsync(await FindWatchlistEntryAsync(actor, viewerId, id, cancellationToken), cancellationToken);
+    }
 
     private async Task<GenrePreference> FindPreferenceAsync(ActorDto actor, Guid viewerId, Guid id, CancellationToken cancellationToken)
     {
@@ -112,6 +121,12 @@ public sealed class PersonalDataService(
             throw new OperationException(FailureKind.Validation, "Status or note is invalid.");
     }
 
-    private static PreferenceDto ToDto(GenrePreference p) => new(p.Id, p.ViewerId, p.GenreId, p.MoodId, p.Weight);
-    private static WatchlistDto ToDto(WatchlistEntry e) => new(e.Id, e.ViewerId, e.MovieId, e.Status, e.Note);
+    private static PreferenceDto ToDto(GenrePreference p)
+    {
+        return new(p.Id, p.ViewerId, p.GenreId, p.MoodId, p.Weight);
+    }
+    private static WatchlistDto ToDto(WatchlistEntry e)
+    {
+        return new(e.Id, e.ViewerId, e.MovieId, e.Status, e.Note);
+    }
 }

@@ -1,3 +1,8 @@
+using MovieWatch.Domain.Common;
+
 namespace MovieWatch.Domain.Dto;
 
-public sealed record AccountDto(string AccountId, IReadOnlyList<string> Roles);
+public record AccountDto(
+    string AccountId,
+    IReadOnlyList<AccountRole> Roles
+    );

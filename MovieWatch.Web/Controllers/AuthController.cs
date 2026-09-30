@@ -18,7 +18,9 @@ public sealed class AuthController(AccountMapper mapper) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ViewerResponse>> Register(RegisterRequest request,
         CancellationToken cancellationToken)
-        => Created("/api/viewers/me", await mapper.RegisterAsync(request, cancellationToken));
+    {
+        return Created("/api/viewers/me", await mapper.RegisterAsync(request, cancellationToken));
+    }
 
     [HttpPost("login")]
     [ProducesResponseType<AccessTokenResponse>(StatusCodes.Status200OK)]
@@ -26,5 +28,7 @@ public sealed class AuthController(AccountMapper mapper) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AccessTokenResponse>> Login(LoginRequest request,
         CancellationToken cancellationToken)
-        => Ok(await mapper.LoginAsync(request, cancellationToken));
+    {
+        return Ok(await mapper.LoginAsync(request, cancellationToken));
+    }
 }

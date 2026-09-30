@@ -14,22 +14,30 @@ public sealed class RecommendationsController(RecommendationMapper mapper) : Con
     [HttpGet("api/viewers/{viewerId:guid}/recommendations")]
     public async Task<ActionResult<RecommendationResultResponse>> ForViewer(Guid viewerId,
         [FromQuery] RecommendationRequest request, CancellationToken cancellationToken)
-        => Ok(await mapper.ForViewerAsync(viewerId, request, cancellationToken));
+    {
+        return Ok(await mapper.ForViewerAsync(viewerId, request, cancellationToken));
+    }
 
     [HttpGet("api/groups/{groupId:guid}/recommendations")]
     public async Task<ActionResult<RecommendationResultResponse>> ForGroup(Guid groupId,
         [FromQuery] RecommendationRequest request, CancellationToken cancellationToken)
-        => Ok(await mapper.ForGroupAsync(groupId, request, cancellationToken));
+    {
+        return Ok(await mapper.ForGroupAsync(groupId, request, cancellationToken));
+    }
 
     [HttpGet("api/viewers/{viewerId:guid}/recommendations.xlsx")]
     public async Task<IActionResult> ExportViewer(Guid viewerId,
         [FromQuery] RecommendationRequest request, CancellationToken cancellationToken)
-        => File(await mapper.ExportViewerAsync(viewerId, request, cancellationToken), ExcelContentType,
+    {
+        return File(await mapper.ExportViewerAsync(viewerId, request, cancellationToken), ExcelContentType,
             "personal-recommendations.xlsx");
+    }
 
     [HttpGet("api/groups/{groupId:guid}/recommendations.xlsx")]
     public async Task<IActionResult> ExportGroup(Guid groupId,
         [FromQuery] RecommendationRequest request, CancellationToken cancellationToken)
-        => File(await mapper.ExportGroupAsync(groupId, request, cancellationToken), ExcelContentType,
+    {
+        return File(await mapper.ExportGroupAsync(groupId, request, cancellationToken), ExcelContentType,
             "group-recommendations.xlsx");
+    }
 }

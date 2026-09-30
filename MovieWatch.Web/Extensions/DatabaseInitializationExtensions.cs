@@ -23,11 +23,12 @@ public static class DatabaseInitializationExtensions
         var database = services.GetRequiredService<ApplicationDbContext>();
         await database.Database.MigrateAsync();
         var roles = services.GetRequiredService<RoleManager<IdentityRole>>();
-        foreach (var role in new[] { AccountRoles.Viewer, AccountRoles.Administrator })
+        foreach (var role in Enum.GetValues<AccountRole>())
         {
-            if (await roles.RoleExistsAsync(role))
+            var roleName = role.ToString();
+            if (await roles.RoleExistsAsync(roleName))
                 continue;
-            var result = await roles.CreateAsync(new IdentityRole(role));
+            var result = await roles.CreateAsync(new IdentityRole(roleName));
             if (!result.Succeeded)
                 throw new InvalidOperationException("Could not initialize account roles.");
         }

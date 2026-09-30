@@ -1,10 +1,11 @@
+using MovieWatch.Domain.Common;
 using MovieWatch.Domain.Dto;
 
 namespace MovieWatch.Repository.Interface;
 
 public interface IIdentityRepository
 {
-    Task<ViewerDto> RegisterAsync(RegisterViewerDto registration, string role, CancellationToken cancellationToken = default);
+    Task<ViewerDto> RegisterAsync(RegisterViewerDto registration, AccountRole role, CancellationToken cancellationToken = default);
     Task<AccountDto?> CheckCredentialsAsync(LoginDto login, CancellationToken cancellationToken = default);
     Task<ViewerDto?> GetProfileAsync(string accountId, CancellationToken cancellationToken = default);
     Task EnsureAdministratorAsync(RegisterViewerDto registration, CancellationToken cancellationToken = default);

@@ -62,11 +62,15 @@ public sealed class TmdbClientTests
     }
 
     private static HttpResponseMessage Json(string body)
-        => new(HttpStatusCode.OK) { Content = new StringContent(body) };
+    {
+        return new(HttpStatusCode.OK) { Content = new StringContent(body) };
+    }
 
     private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(respond(request));
+        {
+            return Task.FromResult(respond(request));
+        }
     }
 }

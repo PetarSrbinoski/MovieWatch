@@ -1,13 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using MovieWatch.Service.Interface;
 
 namespace MovieWatch.Service.Jobs;
 
-public sealed class ImportBackgroundService(IServiceScopeFactory scopes, IConfiguration configuration,
-    ILogger<ImportBackgroundService> logger) : BackgroundService
+public sealed class ImportBackgroundService(IServiceScopeFactory scopes, IConfiguration configuration) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -29,7 +27,7 @@ public sealed class ImportBackgroundService(IServiceScopeFactory scopes, IConfig
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Import worker will retry after an unexpected error.");
+                Console.Error.WriteLine(exception);
                 await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
             }
         }

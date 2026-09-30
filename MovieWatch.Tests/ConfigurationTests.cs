@@ -91,11 +91,14 @@ public class ConfigurationTests
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/swagger/index.html")).StatusCode);
     }
 
-    private static Dictionary<string, string?> AdministratorConfiguration() => new()
+    private static Dictionary<string, string?> AdministratorConfiguration()
+    {
+        return new()
     {
         ["Administrator:Enabled"] = "true",
         ["Administrator:Email"] = "admin@example.com",
         ["Administrator:Password"] = ApiAccounts.Password,
         ["Administrator:DisplayName"] = "Administrator"
     };
+    }
 }

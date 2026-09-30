@@ -9,21 +9,31 @@ namespace MovieWatch.Repository.Implementation;
 public class Repository<TEntity>(ApplicationDbContext context) : IRepository<TEntity> where TEntity : BaseEntity
 {
     public Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
-        => context.Set<TEntity>().AsNoTracking().SingleOrDefaultAsync(predicate, cancellationToken);
+    {
+        return context.Set<TEntity>().AsNoTracking().SingleOrDefaultAsync(predicate, cancellationToken);
+    }
 
     public Task<TEntity?> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
-        => context.Set<TEntity>().SingleOrDefaultAsync(predicate, cancellationToken);
+    {
+        return context.Set<TEntity>().SingleOrDefaultAsync(predicate, cancellationToken);
+    }
 
     public Task<List<TEntity>> ListAsync(Expression<Func<TEntity, bool>>? predicate = null, CancellationToken cancellationToken = default)
-        => (predicate is null ? context.Set<TEntity>() : context.Set<TEntity>().Where(predicate))
+    {
+        return (predicate is null ? context.Set<TEntity>() : context.Set<TEntity>().Where(predicate))
             .AsNoTracking().ToListAsync(cancellationToken);
+    }
 
     public Task<List<TEntity>> PageAsync(int skip, int take, CancellationToken cancellationToken = default)
-        => context.Set<TEntity>().AsNoTracking().OrderBy(entity => entity.Id).Skip(skip).Take(take)
+    {
+        return context.Set<TEntity>().AsNoTracking().OrderBy(entity => entity.Id).Skip(skip).Take(take)
             .ToListAsync(cancellationToken);
+    }
 
     public Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
-        => context.Set<TEntity>().AnyAsync(predicate, cancellationToken);
+    {
+        return context.Set<TEntity>().AnyAsync(predicate, cancellationToken);
+    }
 
     public async Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default)
     {

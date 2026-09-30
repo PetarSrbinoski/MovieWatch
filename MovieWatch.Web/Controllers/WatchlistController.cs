@@ -11,11 +11,15 @@ public sealed class WatchlistController(PersonalMapper mapper) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<WatchlistResponse>>> List(Guid viewerId, CancellationToken cancellationToken)
-        => Ok(await mapper.ListWatchlistAsync(viewerId, cancellationToken));
+    {
+        return Ok(await mapper.ListWatchlistAsync(viewerId, cancellationToken));
+    }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<WatchlistResponse>> Get(Guid viewerId, Guid id, CancellationToken cancellationToken)
-        => Ok(await mapper.GetWatchlistEntryAsync(viewerId, id, cancellationToken));
+    {
+        return Ok(await mapper.GetWatchlistEntryAsync(viewerId, id, cancellationToken));
+    }
 
     [HttpPost]
     public async Task<ActionResult<WatchlistResponse>> Create(Guid viewerId, WatchlistRequest request, CancellationToken cancellationToken)
@@ -27,7 +31,9 @@ public sealed class WatchlistController(PersonalMapper mapper) : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<WatchlistResponse>> Update(Guid viewerId, Guid id,
         WatchlistUpdateRequest request, CancellationToken cancellationToken)
-        => Ok(await mapper.UpdateWatchlistEntryAsync(viewerId, id, request, cancellationToken));
+    {
+        return Ok(await mapper.UpdateWatchlistEntryAsync(viewerId, id, request, cancellationToken));
+    }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid viewerId, Guid id, CancellationToken cancellationToken)

@@ -17,22 +17,30 @@ public sealed class ImportJobRepository(ApplicationDbContext context) : IImportJ
     }
 
     public Task<List<ImportJob>> ListAsync(int skip, int take, CancellationToken cancellationToken)
-        => context.ImportJobs.AsNoTracking().OrderBy(j => j.Id)
+    {
+        return context.ImportJobs.AsNoTracking().OrderBy(j => j.Id)
             .Skip(skip).Take(take).ToListAsync(cancellationToken);
+    }
 
     public Task<ImportJob?> GetAsync(Guid id, CancellationToken cancellationToken)
-        => context.ImportJobs.AsNoTracking().SingleOrDefaultAsync(j => j.Id == id, cancellationToken);
+    {
+        return context.ImportJobs.AsNoTracking().SingleOrDefaultAsync(j => j.Id == id, cancellationToken);
+    }
 
     public async Task<bool> UpdatePendingAsync(Guid id, int expectedVersion, int pageCount, CancellationToken cancellationToken)
-        => await context.ImportJobs.Where(j => j.Id == id && j.Status == ImportJobStatus.Pending
+    {
+        return await context.ImportJobs.Where(j => j.Id == id && j.Status == ImportJobStatus.Pending
                 && j.Version == expectedVersion)
             .ExecuteUpdateAsync(setters => setters.SetProperty(j => j.PageCount, pageCount)
                 .SetProperty(j => j.Version, j => j.Version + 1), cancellationToken) == 1;
+    }
 
     public async Task<bool> DeleteEditableAsync(Guid id, int expectedVersion, CancellationToken cancellationToken)
-        => await context.ImportJobs.Where(j => j.Id == id && j.Status != ImportJobStatus.Running
+    {
+        return await context.ImportJobs.Where(j => j.Id == id && j.Status != ImportJobStatus.Running
                 && j.Version == expectedVersion)
             .ExecuteDeleteAsync(cancellationToken) == 1;
+    }
 
     public async Task<ImportJob?> ClaimNextAsync(Guid owner, DateTime now, CancellationToken cancellationToken)
     {
@@ -73,9 +81,11 @@ public sealed class ImportJobRepository(ApplicationDbContext context) : IImportJ
     }
 
     public async Task<bool> RenewAsync(Guid id, Guid owner, DateTime now, CancellationToken cancellationToken)
-        => await Owned(id, owner, now).ExecuteUpdateAsync(setters => setters
+    {
+        return await Owned(id, owner, now).ExecuteUpdateAsync(setters => setters
             .SetProperty(j => j.LeaseUntil, now + LeaseDuration)
             .SetProperty(j => j.Version, j => j.Version + 1), cancellationToken) == 1;
+    }
 
     public async Task<bool> RecordProgressAsync(Guid id, Guid owner, DateTime now, bool imported, CancellationToken cancellationToken)
     {
@@ -89,33 +99,41 @@ public sealed class ImportJobRepository(ApplicationDbContext context) : IImportJ
     }
 
     public async Task<bool> CompleteAsync(Guid id, Guid owner, DateTime now, CancellationToken cancellationToken)
-        => await Owned(id, owner, now).ExecuteUpdateAsync(setters => setters
+    {
+        return await Owned(id, owner, now).ExecuteUpdateAsync(setters => setters
             .SetProperty(j => j.Status, ImportJobStatus.Completed)
             .SetProperty(j => j.FinishedAt, new DateTimeOffset(now, TimeSpan.Zero))
             .SetProperty(j => j.LeaseOwner, (Guid?)null)
             .SetProperty(j => j.LeaseUntil, (DateTime?)null)
             .SetProperty(j => j.Version, j => j.Version + 1), cancellationToken) == 1;
+    }
 
     public async Task<bool> RetryAsync(Guid id, Guid owner, DateTime now, DateTime nextAttemptAt,
         string error, CancellationToken cancellationToken)
-        => await Owned(id, owner, now).ExecuteUpdateAsync(setters => setters
+    {
+        return await Owned(id, owner, now).ExecuteUpdateAsync(setters => setters
             .SetProperty(j => j.Status, ImportJobStatus.Pending)
             .SetProperty(j => j.NextAttemptAt, nextAttemptAt)
             .SetProperty(j => j.LeaseOwner, (Guid?)null)
             .SetProperty(j => j.LeaseUntil, (DateTime?)null)
             .SetProperty(j => j.Error, error)
             .SetProperty(j => j.Version, j => j.Version + 1), cancellationToken) == 1;
+    }
 
     public async Task<bool> FailAsync(Guid id, Guid owner, DateTime now, string error, CancellationToken cancellationToken)
-        => await Owned(id, owner, now).ExecuteUpdateAsync(setters => setters
+    {
+        return await Owned(id, owner, now).ExecuteUpdateAsync(setters => setters
             .SetProperty(j => j.Status, ImportJobStatus.Failed)
             .SetProperty(j => j.FinishedAt, new DateTimeOffset(now, TimeSpan.Zero))
             .SetProperty(j => j.LeaseOwner, (Guid?)null)
             .SetProperty(j => j.LeaseUntil, (DateTime?)null)
             .SetProperty(j => j.Error, error)
             .SetProperty(j => j.Version, j => j.Version + 1), cancellationToken) == 1;
+    }
 
     private IQueryable<ImportJob> Owned(Guid id, Guid owner, DateTime now)
-        => context.ImportJobs.Where(j => j.Id == id && j.Status == ImportJobStatus.Running
+    {
+        return context.ImportJobs.Where(j => j.Id == id && j.Status == ImportJobStatus.Running
             && j.LeaseOwner == owner && j.LeaseUntil > now);
+    }
 }

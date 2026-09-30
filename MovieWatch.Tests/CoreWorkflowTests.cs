@@ -245,15 +245,21 @@ public sealed class CoreWorkflowTests
         Assert.Equal(HttpStatusCode.Conflict, (await ana.GetAsync(query)).StatusCode);
     }
 
-    private static MovieWatchFactory AdminFactory() => new(overrides: new Dictionary<string, string?>
+    private static MovieWatchFactory AdminFactory()
+    {
+        return new(overrides: new Dictionary<string, string?>
     {
         ["Administrator:Enabled"] = "true",
         ["Administrator:Email"] = "admin@example.com",
         ["Administrator:Password"] = ApiAccounts.Password,
         ["Administrator:DisplayName"] = "Administrator"
     });
+    }
 
-    private static Guid Id(JsonElement value) => value.GetProperty("id").GetGuid();
+    private static Guid Id(JsonElement value)
+    {
+        return value.GetProperty("id").GetGuid();
+    }
 
     private static async Task<JsonElement> CreateAsync(HttpClient client, string path, object value)
     {

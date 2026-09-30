@@ -7,11 +7,14 @@ namespace MovieWatch.Web.Controllers;
 public sealed class AboutController : ControllerBase
 {
     [HttpGet]
-    public IActionResult Get() => Ok(new
+    public IActionResult Get()
+    {
+        return Ok(new
     {
         Name = "MovieWatch",
         Attribution = "This product uses the TMDB API but is not endorsed or certified by TMDB.",
         TmdbLogoUrl = "/tmdb-logo.svg",
         TmdbUrl = "https://www.themoviedb.org"
     });
+    }
 }

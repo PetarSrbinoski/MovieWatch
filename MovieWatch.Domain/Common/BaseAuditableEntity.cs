@@ -2,19 +2,8 @@ namespace MovieWatch.Domain.Common;
 
 public abstract class BaseAuditableEntity : BaseEntity
 {
-    public DateTimeOffset CreatedAt { get; private set; }
-    public DateTimeOffset UpdatedAt { get; private set; }
-    public string CreatedBy { get; private set; } = "";
-    public string UpdatedBy { get; private set; } = "";
-
-    public void Stamp(DateTimeOffset now, string actor, bool created)
-    {
-        if (created)
-        {
-            CreatedAt = now;
-            CreatedBy = actor;
-        }
-        UpdatedAt = now;
-        UpdatedBy = actor;
-    }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public string CreatedBy { get; set; } = "";
+    public string UpdatedBy { get; set; } = "";
 }

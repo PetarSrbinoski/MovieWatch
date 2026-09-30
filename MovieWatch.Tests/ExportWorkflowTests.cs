@@ -75,7 +75,10 @@ public sealed class ExportWorkflowTests
             (await outsider.GetAsync($"/api/groups/{Id(group)}/recommendations.xlsx?{query}")).StatusCode);
     }
 
-    private static Guid Id(JsonElement value) => value.GetProperty("id").GetGuid();
+    private static Guid Id(JsonElement value)
+    {
+        return value.GetProperty("id").GetGuid();
+    }
 
     private static async Task<JsonElement> CreateAsync(HttpClient client, string path, object request)
     {

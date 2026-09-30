@@ -20,11 +20,14 @@ public sealed class GroupService(
     }
 
     public async Task<GroupDto> GetAsync(ActorDto actor, Guid groupId, CancellationToken cancellationToken)
-        => ToDto(await RequireReadableAsync(actor, groupId, cancellationToken));
+    {
+        return ToDto(await RequireReadableAsync(actor, groupId, cancellationToken));
+    }
 
     public async Task<GroupDto> CreateAsync(ActorDto actor, string name, string description, CancellationToken cancellationToken)
     {
         var group = new Group(CleanName(name), CleanDescription(description), actor.ViewerId);
+        group.Memberships.Add(new GroupMembership(group.Id, actor.ViewerId));
         await groups.InsertAsync(group, cancellationToken);
         return await GetAsync(actor, group.Id, cancellationToken);
     }
@@ -33,13 +36,16 @@ public sealed class GroupService(
         CancellationToken cancellationToken)
     {
         var group = await RequireOwnerAsync(actor, groupId, cancellationToken);
-        group.Update(CleanName(name), CleanDescription(description));
+        group.Name = CleanName(name);
+        group.Description = CleanDescription(description);
         await groups.SaveAsync(cancellationToken);
         return await GetAsync(actor, groupId, cancellationToken);
     }
 
     public async Task DeleteAsync(ActorDto actor, Guid groupId, CancellationToken cancellationToken)
-        => await groups.DeleteAsync(await RequireOwnerAsync(actor, groupId, cancellationToken), cancellationToken);
+    {
+        await groups.DeleteAsync(await RequireOwnerAsync(actor, groupId, cancellationToken), cancellationToken);
+    }
 
     public async Task<MembershipDto> AddMemberAsync(ActorDto actor, Guid groupId, Guid viewerId,
         CancellationToken cancellationToken)
@@ -67,7 +73,7 @@ public sealed class GroupService(
             ?? throw new OperationException(FailureKind.NotFound, "Membership was not found.");
         if (member.ViewerId != actor.ViewerId && !actor.IsAdministrator)
             throw new OperationException(FailureKind.NotFound, "Membership was not found.");
-        member.SetParticipation(included);
+        member.IncludedInRecommendations = included;
         await memberships.SaveAsync(cancellationToken);
         return ToDto(member);
     }
@@ -91,7 +97,7 @@ public sealed class GroupService(
         var group = await RequireOwnerAsync(actor, groupId, cancellationToken);
         if (await memberships.GetAsync(m => m.GroupId == groupId && m.ViewerId == targetViewerId, cancellationToken) is null)
             throw new OperationException(FailureKind.Validation, "The new owner must be a group member.");
-        group.TransferOwnership(targetViewerId);
+        group.OwnerViewerId = targetViewerId;
         await groups.SaveAsync(cancellationToken);
         return await GetAsync(actor, groupId, cancellationToken);
     }
@@ -115,14 +121,23 @@ public sealed class GroupService(
         return group;
     }
 
-    private static GroupDto ToDto(Group group) => new(group.Id, group.Name, group.Description,
+    private static GroupDto ToDto(Group group)
+    {
+        return new(group.Id, group.Name, group.Description,
         group.OwnerViewerId, group.Memberships.OrderBy(m => m.Id).Select(ToDto).ToArray());
+    }
     private static MembershipDto ToDto(GroupMembership member)
-        => new(member.Id, member.GroupId, member.ViewerId, member.IncludedInRecommendations);
+    {
+        return new(member.Id, member.GroupId, member.ViewerId, member.IncludedInRecommendations);
+    }
     private static string CleanName(string name)
-        => !string.IsNullOrWhiteSpace(name) && name.Trim().Length <= 100 ? name.Trim()
+    {
+        return !string.IsNullOrWhiteSpace(name) && name.Trim().Length <= 100 ? name.Trim()
             : throw new OperationException(FailureKind.Validation, "Group name must contain 1 to 100 characters.");
+    }
     private static string CleanDescription(string description)
-        => (description?.Trim() ?? "") is { Length: <= 1000 } value ? value
+    {
+        return (description?.Trim() ?? "") is { Length: <= 1000 } value ? value
             : throw new OperationException(FailureKind.Validation, "Description must be at most 1000 characters.");
+    }
 }

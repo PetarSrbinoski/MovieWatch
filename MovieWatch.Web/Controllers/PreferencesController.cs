@@ -11,11 +11,15 @@ public sealed class PreferencesController(PersonalMapper mapper) : ControllerBas
 {
     [HttpGet]
     public async Task<ActionResult<List<PreferenceResponse>>> List(Guid viewerId, CancellationToken cancellationToken)
-        => Ok(await mapper.ListPreferencesAsync(viewerId, cancellationToken));
+    {
+        return Ok(await mapper.ListPreferencesAsync(viewerId, cancellationToken));
+    }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<PreferenceResponse>> Get(Guid viewerId, Guid id, CancellationToken cancellationToken)
-        => Ok(await mapper.GetPreferenceAsync(viewerId, id, cancellationToken));
+    {
+        return Ok(await mapper.GetPreferenceAsync(viewerId, id, cancellationToken));
+    }
 
     [HttpPost]
     public async Task<ActionResult<PreferenceResponse>> Create(Guid viewerId, PreferenceRequest request, CancellationToken cancellationToken)
@@ -27,7 +31,9 @@ public sealed class PreferencesController(PersonalMapper mapper) : ControllerBas
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<PreferenceResponse>> Update(Guid viewerId, Guid id,
         PreferenceWeightRequest request, CancellationToken cancellationToken)
-        => Ok(await mapper.UpdatePreferenceAsync(viewerId, id, request, cancellationToken));
+    {
+        return Ok(await mapper.UpdatePreferenceAsync(viewerId, id, request, cancellationToken));
+    }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid viewerId, Guid id, CancellationToken cancellationToken)

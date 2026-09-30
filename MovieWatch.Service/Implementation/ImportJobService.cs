@@ -22,8 +22,10 @@ public sealed class ImportJobService(IImportJobRepository jobs, TimeProvider clo
     }
 
     public async Task<ImportJobDto> GetAsync(Guid id, CancellationToken cancellationToken)
-        => ToDto(await jobs.GetAsync(id, cancellationToken)
+    {
+        return ToDto(await jobs.GetAsync(id, cancellationToken)
             ?? throw new OperationException(FailureKind.NotFound, "Import job was not found."));
+    }
 
     public async Task<ImportJobDto> UpdateAsync(Guid id, int version, int pageCount, CancellationToken cancellationToken)
     {
@@ -51,7 +53,10 @@ public sealed class ImportJobService(IImportJobRepository jobs, TimeProvider clo
             throw new OperationException(FailureKind.Validation, "Page count must be 1 to 5.");
     }
 
-    private static ImportJobDto ToDto(ImportJob job) => new(job.Id, job.PageCount, job.Status,
+    private static ImportJobDto ToDto(ImportJob job)
+    {
+        return new(job.Id, job.PageCount, job.Status,
         job.AttemptCount, job.CreatedAt, job.StartedAt, job.FinishedAt, job.NextAttemptAt,
         job.LeaseUntil, job.ImportedCount, job.SkippedCount, job.Error, job.Version);
+    }
 }

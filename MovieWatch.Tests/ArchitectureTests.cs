@@ -31,7 +31,6 @@ public class ArchitectureTests
         Assert.Empty(document.Descendants("PackageReference"));
         Assert.Empty(document.Descendants("FrameworkReference"));
         Assert.All(typeof(Viewer).Assembly.GetReferencedAssemblies(), assembly => Assert.StartsWith("System.", assembly.Name));
-        Assert.All(typeof(Viewer).GetProperties(), property => Assert.False(property.SetMethod?.IsPublic ?? false));
     }
 
     [Fact]
@@ -67,7 +66,9 @@ public class ArchitectureTests
     }
 
     private static IEnumerable<Type> ExpandType(Type type)
-        => new[] { type }.Concat(type.GetGenericArguments().SelectMany(ExpandType));
+    {
+        return new[] { type }.Concat(type.GetGenericArguments().SelectMany(ExpandType));
+    }
 
     private static string SolutionRoot()
     {

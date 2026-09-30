@@ -30,7 +30,15 @@ public sealed class AuditSaveChangesInterceptor(IHttpContextAccessor accessor, T
         foreach (var entry in context.ChangeTracker.Entries<BaseAuditableEntity>())
         {
             if (entry.State is EntityState.Added or EntityState.Modified)
-                entry.Entity.Stamp(now, actor, entry.State == EntityState.Added);
+            {
+                if (entry.State == EntityState.Added)
+                {
+                    entry.Entity.CreatedAt = now;
+                    entry.Entity.CreatedBy = actor;
+                }
+                entry.Entity.UpdatedAt = now;
+                entry.Entity.UpdatedBy = actor;
+            }
         }
     }
 }

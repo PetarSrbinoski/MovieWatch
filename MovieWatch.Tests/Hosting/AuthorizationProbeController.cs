@@ -10,6 +10,9 @@ namespace MovieWatch.Tests.Hosting;
 public sealed class AuthorizationProbeController : ControllerBase
 {
     [HttpGet]
-    [Authorize(Roles = AccountRoles.Administrator)]
-    public IActionResult Get() => NoContent();
+    [Authorize(Roles = nameof(AccountRole.Administrator))]
+    public IActionResult Get()
+    {
+        return NoContent();
+    }
 }

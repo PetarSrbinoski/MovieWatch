@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using MovieWatch.Repository.Interface;
 using MovieWatch.Service.Interface;
 
@@ -7,7 +6,7 @@ namespace MovieWatch.Service.Implementation;
 
 public sealed class ImportProcessor(
     IImportJobRepository jobs, ITmdbClient tmdb, IServiceScopeFactory scopes,
-    TimeProvider clock, ILogger<ImportProcessor> logger) : IImportProcessor
+    TimeProvider clock) : IImportProcessor
 {
     public async Task<bool> ProcessOneAsync(CancellationToken cancellationToken)
     {
@@ -43,7 +42,7 @@ public sealed class ImportProcessor(
                 }
                 catch (ImportLoadException exception)
                 {
-                    logger.LogWarning(exception, "Skipping TMDB movie {TmdbId} after a data conflict.", id);
+                    Console.Error.WriteLine(exception);
                     await RecordAsync(job.Id, owner, false, work.Token);
                 }
             }
@@ -56,6 +55,7 @@ public sealed class ImportProcessor(
         }
         catch (ImportSourceException exception)
         {
+            Console.Error.WriteLine(exception);
             if (exception.Transient && job.AttemptCount < 3)
             {
                 var baseDelay = TimeSpan.FromSeconds(5 * (1 << (job.AttemptCount - 1)));
@@ -69,7 +69,7 @@ public sealed class ImportProcessor(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Import job {JobId} failed.", job.Id);
+            Console.Error.WriteLine(exception);
             await jobs.FailAsync(job.Id, owner, Now(), "Import failed while processing catalogue data.", cancellationToken);
         }
         finally
@@ -102,5 +102,8 @@ public sealed class ImportProcessor(
         }
     }
 
-    private DateTime Now() => clock.GetUtcNow().UtcDateTime;
+    private DateTime Now()
+    {
+        return clock.GetUtcNow().UtcDateTime;
+    }
 }

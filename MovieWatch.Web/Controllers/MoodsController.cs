@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MovieWatch.Domain.Common;
 using MovieWatch.Web.Mapper;
 using MovieWatch.Web.Request;
 using MovieWatch.Web.Response;
@@ -11,24 +12,30 @@ public sealed class MoodsController(CatalogueMapper mapper) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<MoodResponse>>> List(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
-        => Ok((await mapper.ListMoodsAsync(skip, take, cancellationToken)).Select(m => m.ToResponse()));
+    {
+        return Ok((await mapper.ListMoodsAsync(skip, take, cancellationToken)).Select(m => m.ToResponse()));
+    }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<MoodResponse>> Get(Guid id, CancellationToken cancellationToken)
-        => Ok((await mapper.GetMoodAsync(id, cancellationToken)).ToResponse());
+    {
+        return Ok((await mapper.GetMoodAsync(id, cancellationToken)).ToResponse());
+    }
 
-    [HttpPost, Authorize(Roles = "Administrator")]
+    [HttpPost, Authorize(Roles = nameof(AccountRole.Administrator))]
     public async Task<ActionResult<MoodResponse>> Create(MoodRequest request, CancellationToken cancellationToken)
     {
         var mood = (await mapper.CreateMoodAsync(request, cancellationToken)).ToResponse();
         return CreatedAtAction(nameof(Get), new { id = mood.Id }, mood);
     }
 
-    [HttpPut("{id:guid}"), Authorize(Roles = "Administrator")]
+    [HttpPut("{id:guid}"), Authorize(Roles = nameof(AccountRole.Administrator))]
     public async Task<ActionResult<MoodResponse>> Update(Guid id, MoodRequest request, CancellationToken cancellationToken)
-        => Ok((await mapper.UpdateMoodAsync(id, request, cancellationToken)).ToResponse());
+    {
+        return Ok((await mapper.UpdateMoodAsync(id, request, cancellationToken)).ToResponse());
+    }
 
-    [HttpDelete("{id:guid}"), Authorize(Roles = "Administrator")]
+    [HttpDelete("{id:guid}"), Authorize(Roles = nameof(AccountRole.Administrator))]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         await mapper.DeleteMoodAsync(id, cancellationToken);

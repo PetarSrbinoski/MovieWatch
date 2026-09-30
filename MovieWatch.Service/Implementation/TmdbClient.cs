@@ -29,8 +29,9 @@ public sealed class TmdbClient(HttpClient client, IOptions<TmdbSettings> setting
             return result?.Results?.Where(m => m.Id > 0).Select(m => m.Id).Distinct().ToArray()
                 ?? throw new JsonException();
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
+            Console.Error.WriteLine(exception);
             throw new ImportSourceException("TMDB discovery response was invalid.", false);
         }
     }
@@ -57,8 +58,9 @@ public sealed class TmdbClient(HttpClient client, IOptions<TmdbSettings> setting
                 result.Runtime is > 0 ? result.Runtime : null, releaseDate,
                 Math.Max(0, result.VoteCount), genres);
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
+            Console.Error.WriteLine(exception);
             return null;
         }
     }
@@ -75,12 +77,14 @@ public sealed class TmdbClient(HttpClient client, IOptions<TmdbSettings> setting
         {
             response = await client.SendAsync(request, cancellationToken);
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException exception)
         {
+            Console.Error.WriteLine(exception);
             throw new ImportSourceException("TMDB connection failed.", true);
         }
-        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
+            Console.Error.WriteLine(exception);
             throw new ImportSourceException("TMDB request timed out.", true);
         }
         if (response.IsSuccessStatusCode || allowNotFound && response.StatusCode == HttpStatusCode.NotFound)
@@ -96,16 +100,26 @@ public sealed class TmdbClient(HttpClient client, IOptions<TmdbSettings> setting
         throw new ImportSourceException("TMDB rejected the request.", false);
     }
 
-    private sealed record Discovery([property: JsonPropertyName("results")] DiscoveryItem[]? Results);
-    private sealed record DiscoveryItem([property: JsonPropertyName("id")] long Id);
-    private sealed record ExternalGenre([property: JsonPropertyName("id")] long Id,
-        [property: JsonPropertyName("name")] string? Name);
-    private sealed record MovieDetails(
+    private record Discovery(
+        [property: JsonPropertyName("results")] DiscoveryItem[]? Results
+        );
+
+    private record DiscoveryItem(
+        [property: JsonPropertyName("id")] long Id
+        );
+
+    private record ExternalGenre(
+        [property: JsonPropertyName("id")] long Id,
+        [property: JsonPropertyName("name")] string? Name
+        );
+
+    private record MovieDetails(
         [property: JsonPropertyName("id")] long Id,
         [property: JsonPropertyName("title")] string? Title,
         [property: JsonPropertyName("overview")] string? Overview,
         [property: JsonPropertyName("runtime")] int? Runtime,
         [property: JsonPropertyName("release_date")] string? ReleaseDate,
         [property: JsonPropertyName("vote_count")] int VoteCount,
-        [property: JsonPropertyName("genres")] ExternalGenre[]? Genres);
+        [property: JsonPropertyName("genres")] ExternalGenre[]? Genres
+        );
 }

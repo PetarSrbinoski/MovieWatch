@@ -73,21 +73,27 @@ public sealed class RecommendationService(
     }
 
     private async Task<HashSet<Guid>> WatchedIdsAsync(Guid[] viewers, RecommendationQueryDto query, CancellationToken cancellationToken)
-        => query.IncludeWatched ? [] : (await watchlist.ListAsync(e => viewers.Contains(e.ViewerId)
+    {
+        return query.IncludeWatched ? [] : (await watchlist.ListAsync(e => viewers.Contains(e.ViewerId)
             && e.Status == WatchStatus.Watched, cancellationToken)).Select(e => e.MovieId).ToHashSet();
+    }
 
     private static IEnumerable<Movie> Eligible(IEnumerable<Movie> movies, RecommendationQueryDto query,
         HashSet<Guid> watched, DateOnly today)
-        => movies.Where(movie => movie.RuntimeMinutes is > 0 && movie.RuntimeMinutes <= query.MaximumRuntimeMinutes
+    {
+        return movies.Where(movie => movie.RuntimeMinutes is > 0 && movie.RuntimeMinutes <= query.MaximumRuntimeMinutes
             && movie.ReleaseDate is not null && movie.ReleaseDate <= today
             && !watched.Contains(movie.Id)
             && (query.GenreIds.Count == 0 || movie.MovieGenres.Any(link => query.GenreIds.Contains(link.GenreId))));
+    }
 
     private static List<GenreContributionDto> Contributions(Movie movie, Dictionary<Guid, int> weights)
-        => movie.MovieGenres.GroupBy(link => link.GenreId).Select(group => group.First())
+    {
+        return movie.MovieGenres.GroupBy(link => link.GenreId).Select(group => group.First())
             .OrderBy(link => link.Genre.Name)
             .Select(link => new GenreContributionDto(link.GenreId, link.Genre.Name,
                 weights.GetValueOrDefault(link.GenreId))).ToList();
+    }
 
     private static double Mean(IEnumerable<int> values)
     {
@@ -103,13 +109,26 @@ public sealed class RecommendationService(
 
     private static RecommendationResultDto Result(Context context, RecommendationQueryDto query,
         IEnumerable<Ranked> results, IReadOnlyList<Guid> participants)
-        => new(context.Mood, query, context.Now, results.OrderByDescending(r => r.Score)
+    {
+        return new(context.Mood, query, context.Now, results.OrderByDescending(r => r.Score)
             .ThenByDescending(r => r.Movie.VoteCount).ThenBy(r => r.Movie.Id).Take(query.Limit)
             .Select(r => new RecommendationDto(r.Movie.ToDto(), Math.Round(r.Score, 3), r.Explanation,
                 r.Contributions, r.MemberScores.Select(m => m with { Score = Math.Round(m.Score, 3) }).ToArray()))
             .ToArray(), participants);
+    }
 
-    private sealed record Context(MoodDto Mood, List<Movie> Movies, DateOnly Today, DateTimeOffset Now);
-    private sealed record Ranked(Movie Movie, double Score, string Explanation,
-        IReadOnlyList<GenreContributionDto> Contributions, IReadOnlyList<MemberScoreDto> MemberScores);
+    private record Context(
+        MoodDto Mood,
+        List<Movie> Movies,
+        DateOnly Today,
+        DateTimeOffset Now
+        );
+
+    private record Ranked(
+        Movie Movie,
+        double Score,
+        string Explanation,
+        IReadOnlyList<GenreContributionDto> Contributions,
+        IReadOnlyList<MemberScoreDto> MemberScores
+        );
 }

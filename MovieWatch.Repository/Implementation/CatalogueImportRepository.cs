@@ -23,7 +23,10 @@ public sealed class CatalogueImportRepository(ApplicationDbContext context) : IC
                     context.Genres.Add(genre);
                 }
                 else
-                    genre.Refresh(external.TmdbId, external.Name);
+                {
+                    genre.TmdbId = external.TmdbId;
+                    genre.Name = external.Name;
+                }
                 genreIds.Add(genre.Id);
             }
             await context.SaveChangesAsync(cancellationToken);
@@ -33,8 +36,13 @@ public sealed class CatalogueImportRepository(ApplicationDbContext context) : IC
                 movie = new Movie(imported.Title, imported.Overview, imported.RuntimeMinutes, imported.ReleaseDate);
                 context.Movies.Add(movie);
             }
-            movie.Refresh(imported.TmdbId, imported.Title, imported.Overview, imported.RuntimeMinutes,
-                imported.ReleaseDate, imported.VoteCount, now);
+            movie.TmdbId = imported.TmdbId;
+            movie.Title = imported.Title;
+            movie.Overview = imported.Overview;
+            movie.RuntimeMinutes = imported.RuntimeMinutes;
+            movie.ReleaseDate = imported.ReleaseDate;
+            movie.VoteCount = imported.VoteCount;
+            movie.LastImportedAt = now;
             var desired = genreIds.ToHashSet();
             foreach (var old in movie.MovieGenres.Where(link => !desired.Contains(link.GenreId)))
                 context.MovieGenres.Remove(old);

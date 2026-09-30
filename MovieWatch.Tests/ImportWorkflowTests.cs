@@ -238,7 +238,10 @@ public sealed class ImportWorkflowTests
         }
     }
 
-    private static Guid Id(JsonElement value) => value.GetProperty("id").GetGuid();
+    private static Guid Id(JsonElement value)
+    {
+        return value.GetProperty("id").GetGuid();
+    }
 
     private static async Task<JsonElement> SubmitAsync(HttpClient client)
     {
@@ -300,7 +303,13 @@ public sealed class ImportWorkflowTests
     private sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider
     {
         private DateTimeOffset _now = now;
-        public override DateTimeOffset GetUtcNow() => _now;
-        public void Advance(TimeSpan duration) => _now += duration;
+        public override DateTimeOffset GetUtcNow()
+        {
+            return _now;
+        }
+        public void Advance(TimeSpan duration)
+        {
+            _now += duration;
+        }
     }
 }

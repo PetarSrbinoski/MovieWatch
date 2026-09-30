@@ -14,23 +14,30 @@ namespace MovieWatch.Service.Implementation;
 public sealed class AccountService(IIdentityRepository identity, IOptions<JwtSettings> settings) : IAccountService
 {
     public Task<ViewerDto> RegisterAsync(RegisterViewerDto registration, CancellationToken cancellationToken = default)
-        => identity.RegisterAsync(registration, AccountRoles.Viewer, cancellationToken);
+    {
+        return identity.RegisterAsync(registration with { DisplayName = ValidateDisplayName(registration.DisplayName) },
+            AccountRole.Viewer, cancellationToken);
+    }
 
     public async Task<AccessTokenDto> LoginAsync(LoginDto login, CancellationToken cancellationToken = default)
     {
         var account = await identity.CheckCredentialsAsync(login, cancellationToken)
-            ?? throw new OperationException(FailureKind.Unauthenticated, "Invalid email or password.");
+                      ?? throw new OperationException(FailureKind.Unauthenticated, "Invalid email or password.");
         return GenerateToken(account);
     }
 
     public async Task<ViewerDto> GetOwnProfileAsync(string accountId, CancellationToken cancellationToken = default)
     {
         return await identity.GetProfileAsync(accountId, cancellationToken)
-            ?? throw new OperationException(FailureKind.Unauthenticated, "The account is no longer available.");
+               ?? throw new OperationException(FailureKind.Unauthenticated, "The account is no longer available.");
     }
 
-    public Task BootstrapAdministratorAsync(RegisterViewerDto registration, CancellationToken cancellationToken = default)
-        => identity.EnsureAdministratorAsync(registration, cancellationToken);
+    public Task BootstrapAdministratorAsync(RegisterViewerDto registration,
+        CancellationToken cancellationToken = default)
+    {
+        return identity.EnsureAdministratorAsync(
+            registration with { DisplayName = ValidateDisplayName(registration.DisplayName) }, cancellationToken);
+    }
 
     public Task<List<ViewerDto>> ListProfilesAsync(int skip, int take, CancellationToken cancellationToken = default)
     {
@@ -40,14 +47,22 @@ public sealed class AccountService(IIdentityRepository identity, IOptions<JwtSet
     }
 
     public async Task<ViewerDto> GetProfileAsync(Guid viewerId, CancellationToken cancellationToken = default)
-        => await identity.GetProfileByViewerIdAsync(viewerId, cancellationToken)
-            ?? throw new OperationException(FailureKind.Validation, "Viewer was not found.");
+    {
+        return await identity.GetProfileByViewerIdAsync(viewerId, cancellationToken)
+           ?? throw new OperationException(FailureKind.Validation, "Viewer was not found.");
+    }
 
-    public Task<ViewerDto> UpdateProfileAsync(Guid viewerId, UpdateViewerDto update, CancellationToken cancellationToken = default)
-        => identity.UpdateProfileAsync(viewerId, update, cancellationToken);
+    public Task<ViewerDto> UpdateProfileAsync(Guid viewerId, UpdateViewerDto update,
+        CancellationToken cancellationToken = default)
+    {
+        return identity.UpdateProfileAsync(viewerId,
+            update with { DisplayName = ValidateDisplayName(update.DisplayName) }, cancellationToken);
+    }
 
     public Task DeleteProfileAsync(Guid viewerId, CancellationToken cancellationToken = default)
-        => identity.DeleteProfileAsync(viewerId, cancellationToken);
+    {
+        return identity.DeleteProfileAsync(viewerId, cancellationToken);
+    }
 
     private AccessTokenDto GenerateToken(AccountDto account)
     {
@@ -58,11 +73,18 @@ public sealed class AccountService(IIdentityRepository identity, IOptions<JwtSet
             new(JwtRegisteredClaimNames.Sub, account.AccountId),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
-        claims.AddRange(account.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        claims.AddRange(account.Roles.Select(role => new Claim(ClaimTypes.Role, role.ToString())));
         var token = new JwtSecurityToken(jwt.Issuer, jwt.Audience, claims,
             expires: expiresAt.UtcDateTime,
             signingCredentials: new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)), SecurityAlgorithms.HmacSha256));
         return new AccessTokenDto(new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
+    }
+
+    private static string ValidateDisplayName(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName) || displayName.Trim().Length > 100)
+            throw new OperationException(FailureKind.Validation, "Display name must contain 1 to 100 characters.");
+        return displayName.Trim();
     }
 }

@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using MovieWatch.Domain.Common;
 
 namespace MovieWatch.Web.Errors;
 
-public sealed class ApiExceptionHandler(IProblemDetailsService problems, ILogger<ApiExceptionHandler> logger) : IExceptionHandler
+public sealed class ApiExceptionHandler(IProblemDetailsService problems) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
@@ -19,8 +18,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problems, ILogger
         } : StatusCodes.Status500InternalServerError;
 
         context.Response.StatusCode = status;
-        if (status == StatusCodes.Status500InternalServerError)
-            logger.LogError(exception, "An unexpected API error occurred.");
+        Console.Error.WriteLine(exception);
         if (status == StatusCodes.Status401Unauthorized)
             context.Response.Headers.WWWAuthenticate = "Bearer";
         return await problems.TryWriteAsync(new ProblemDetailsContext

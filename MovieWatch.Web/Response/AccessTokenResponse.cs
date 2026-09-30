@@ -1,3 +1,7 @@
 namespace MovieWatch.Web.Response;
 
-public sealed record AccessTokenResponse(string AccessToken, DateTimeOffset ExpiresAt, string TokenType);
+public record AccessTokenResponse(
+    string AccessToken,
+    DateTimeOffset ExpiresAt,
+    string TokenType
+    );
