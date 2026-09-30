@@ -17,6 +17,13 @@
 @watchlistEntryId = paste-watchlist-entry-id-here
 @jobId = paste-job-id-here
 @jobVersion = paste-job-version-here
+@managedViewerId = paste-managed-viewer-id-here
+@secondMoodId = paste-second-mood-id-here
+@secondGenreId = paste-second-genre-id-here
+@secondPreferenceId = paste-second-preference-id-here
+@secondViewerPreferenceId = paste-second-viewer-preference-id-here
+@repeatJobId = paste-repeat-job-id-here
+@liveJobId = paste-live-job-id-here
 
 ### Register a viewer; repeat returns 409
 POST {{baseUrl}}/api/auth/register
@@ -37,8 +44,21 @@ Content-Type: application/json
   "password": "{{password}}"
 }
 
+### Register and sign in a second viewer; copy secondViewerId and secondViewerToken
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{ "email": "boris@example.com", "password": "Example-password1!", "displayName": "Boris" }
+
+###
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "boris@example.com", "password": "Example-password1!" }
+
 ### Read the signed-in viewer's profile
 GET {{baseUrl}}/api/viewers/me
+Authorization: Bearer {{accessToken}}
 
 ### Administrator signs in after bootstrap; copy the token to adminToken
 POST {{baseUrl}}/api/auth/login
@@ -49,6 +69,32 @@ Content-Type: application/json
   "password": "your-configured-admin-password"
 }
 
+### Administrator creates a managed viewer; copy managedViewerId
+POST {{baseUrl}}/api/viewers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "email": "managed@example.com", "password": "Example-password1!", "displayName": "Managed" }
+
+### Viewer collection, detail, update, and eventual deletion
+GET {{baseUrl}}/api/viewers?skip=0&take=20
+Authorization: Bearer {{adminToken}}
+
+###
+GET {{baseUrl}}/api/viewers/{{managedViewerId}}
+Authorization: Bearer {{adminToken}}
+
+###
+PUT {{baseUrl}}/api/viewers/{{managedViewerId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "email": "managed-renamed@example.com", "displayName": "Managed renamed" }
+
+###
+DELETE {{baseUrl}}/api/viewers/{{managedViewerId}}
+Authorization: Bearer {{adminToken}}
+
 ### Create shared genre and mood; copy their IDs
 POST {{baseUrl}}/api/genres
 Authorization: Bearer {{adminToken}}
@@ -56,12 +102,42 @@ Content-Type: application/json
 
 { "name": "Comedy" }
 
+### A second genre is used to demonstrate association replacement
+POST {{baseUrl}}/api/genres
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "Drama" }
+
 ###
 POST {{baseUrl}}/api/moods
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 { "name": "Relaxing", "description": "An easy evening" }
+
+### A second mood makes the Viewer-Genre-Mood relationship visible
+POST {{baseUrl}}/api/moods
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "Adventurous", "description": "Looking for excitement" }
+
+### Catalogue collection and detail reads
+GET {{baseUrl}}/api/genres
+Authorization: Bearer {{accessToken}}
+
+###
+GET {{baseUrl}}/api/genres/{{genreId}}
+Authorization: Bearer {{accessToken}}
+
+###
+GET {{baseUrl}}/api/moods
+Authorization: Bearer {{accessToken}}
+
+###
+GET {{baseUrl}}/api/moods/{{moodId}}
+Authorization: Bearer {{accessToken}}
 
 ### Create a manual movie; copy its ID
 POST {{baseUrl}}/api/movies
@@ -76,6 +152,14 @@ Content-Type: application/json
   "genreIds": ["{{genreId}}"]
 }
 
+### Movie collection and detail reads
+GET {{baseUrl}}/api/movies
+Authorization: Bearer {{accessToken}}
+
+###
+GET {{baseUrl}}/api/movies/{{movieId}}
+Authorization: Bearer {{accessToken}}
+
 ### Give this viewer a positive preference for the mood and genre
 POST {{baseUrl}}/api/viewers/{{viewerId}}/preferences
 Authorization: Bearer {{accessToken}}
@@ -83,8 +167,44 @@ Content-Type: application/json
 
 { "genreId": "{{genreId}}", "moodId": "{{moodId}}", "weight": 2 }
 
+### Same viewer and genre, different mood: an independent negative preference
+POST {{baseUrl}}/api/viewers/{{viewerId}}/preferences
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "genreId": "{{genreId}}", "moodId": "{{secondMoodId}}", "weight": -2 }
+
+### A second viewer may assign an independent weight to the same genre and mood
+POST {{baseUrl}}/api/viewers/{{secondViewerId}}/preferences
+Authorization: Bearer {{secondViewerToken}}
+Content-Type: application/json
+
+{ "genreId": "{{genreId}}", "moodId": "{{moodId}}", "weight": -1 }
+
+### Exact duplicate triple returns 409
+POST {{baseUrl}}/api/viewers/{{viewerId}}/preferences
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "genreId": "{{genreId}}", "moodId": "{{moodId}}", "weight": 1 }
+
+### A missing genre reference returns a validation problem
+POST {{baseUrl}}/api/viewers/{{viewerId}}/preferences
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "genreId": "00000000-0000-0000-0000-000000000001", "moodId": "{{moodId}}", "weight": 1 }
+
+### Collection read for the two preference triples
+GET {{baseUrl}}/api/viewers/{{viewerId}}/preferences
+Authorization: Bearer {{accessToken}}
+
 ### Explain personal recommendations, then download the same calculation
 GET {{baseUrl}}/api/viewers/{{viewerId}}/recommendations?moodId={{moodId}}&maximumRuntimeMinutes=120
+Authorization: Bearer {{accessToken}}
+
+### The same movie should score -2 in the second mood
+GET {{baseUrl}}/api/viewers/{{viewerId}}/recommendations?moodId={{secondMoodId}}&maximumRuntimeMinutes=120
 Authorization: Bearer {{accessToken}}
 
 ###
@@ -98,12 +218,28 @@ Content-Type: application/json
 
 { "movieId": "{{movieId}}", "status": "Watched", "note": "Seen last week" }
 
+### Watchlist collection and detail reads
+GET {{baseUrl}}/api/viewers/{{viewerId}}/watchlist
+Authorization: Bearer {{accessToken}}
+
+###
+GET {{baseUrl}}/api/viewers/{{viewerId}}/watchlist/{{watchlistEntryId}}
+Authorization: Bearer {{accessToken}}
+
 ### Create a group with the signed-in viewer as owner and included member
 POST {{baseUrl}}/api/groups
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 { "name": "Friday films", "description": "Friends choosing together" }
+
+### Group collection and detail reads
+GET {{baseUrl}}/api/groups
+Authorization: Bearer {{accessToken}}
+
+###
+GET {{baseUrl}}/api/groups/{{groupId}}
+Authorization: Bearer {{accessToken}}
 
 ### Add an existing second viewer; copy the membership ID
 POST {{baseUrl}}/api/groups/{{groupId}}/members
@@ -112,12 +248,24 @@ Content-Type: application/json
 
 { "viewerId": "{{secondViewerId}}" }
 
-### Group ranking and Excel export use equal member averages
+### Membership detail read
+GET {{baseUrl}}/api/groups/{{groupId}}/members/{{membershipId}}
+Authorization: Bearer {{accessToken}}
+
+### Default group ranking excludes Ana's Watched movie
 GET {{baseUrl}}/api/groups/{{groupId}}/recommendations?moodId={{moodId}}&maximumRuntimeMinutes=120
 Authorization: Bearer {{accessToken}}
 
+### Include watched films to inspect equal member averages
+GET {{baseUrl}}/api/groups/{{groupId}}/recommendations?moodId={{moodId}}&maximumRuntimeMinutes=120&includeWatched=true
+Authorization: Bearer {{accessToken}}
+
 ###
-GET {{baseUrl}}/api/groups/{{groupId}}/recommendations.xlsx?moodId={{moodId}}&maximumRuntimeMinutes=120
+GET {{baseUrl}}/api/groups/{{groupId}}/recommendations.xlsx?moodId={{moodId}}&maximumRuntimeMinutes=120&includeWatched=true
+Authorization: Bearer {{accessToken}}
+
+### Deleting the current owner's account while the group exists returns 409
+DELETE {{baseUrl}}/api/viewers/me
 Authorization: Bearer {{accessToken}}
 
 ### Transfer ownership before the original owner leaves
@@ -127,15 +275,19 @@ Content-Type: application/json
 
 { "viewerId": "{{secondViewerId}}" }
 
-### Queue a one-page TMDB import; copy job ID and version from the 202 response
+### With Import__WorkerEnabled=false, queue a job; copy its ID and version
 POST {{baseUrl}}/api/import-jobs
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 { "pageCount": 1 }
 
-### Poll job status; the worker runs separately from the POST request
+### Pending status is visible immediately, before external work
 GET {{baseUrl}}/api/import-jobs/{{jobId}}
+Authorization: Bearer {{adminToken}}
+
+### Import job collection read
+GET {{baseUrl}}/api/import-jobs
 Authorization: Bearer {{adminToken}}
 
 ### Update or delete a Pending job with the version from its latest GET
@@ -147,6 +299,28 @@ Content-Type: application/json
 
 ### Delete only when Pending, Completed, or Failed; refresh jobVersion first
 DELETE {{baseUrl}}/api/import-jobs/{{jobId}}?version={{jobVersion}}
+Authorization: Bearer {{adminToken}}
+
+### Restart with Import__WorkerEnabled=true and a private TMDB token; copy liveJobId
+POST {{baseUrl}}/api/import-jobs
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "pageCount": 1 }
+
+### Poll until Completed, then inspect the movies
+GET {{baseUrl}}/api/import-jobs/{{liveJobId}}
+Authorization: Bearer {{adminToken}}
+
+### Submit the same page again and compare Movie TMDB IDs; copy repeatJobId
+POST {{baseUrl}}/api/import-jobs
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "pageCount": 1 }
+
+###
+GET {{baseUrl}}/api/import-jobs/{{repeatJobId}}
 Authorization: Bearer {{adminToken}}
 
 ### Update and inspect the preference
@@ -193,6 +367,14 @@ Authorization: Bearer {{accessToken}}
 DELETE {{baseUrl}}/api/viewers/{{viewerId}}/preferences/{{preferenceId}}
 Authorization: Bearer {{accessToken}}
 
+### Remove the second mood preference before deleting that mood
+DELETE {{baseUrl}}/api/viewers/{{viewerId}}/preferences/{{secondPreferenceId}}
+Authorization: Bearer {{accessToken}}
+
+### Remove the other viewer's independent preference
+DELETE {{baseUrl}}/api/viewers/{{secondViewerId}}/preferences/{{secondViewerPreferenceId}}
+Authorization: Bearer {{secondViewerToken}}
+
 ###
 DELETE {{baseUrl}}/api/groups/{{groupId}}
 Authorization: Bearer {{secondViewerToken}}
@@ -209,6 +391,23 @@ Content-Type: application/json
   "releaseDate": "2020-01-01",
   "genreIds": ["{{genreId}}"]
 }
+
+### Replace the movie's genre association, then inspect it
+PUT {{baseUrl}}/api/movies/{{movieId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "A Good Film",
+  "overview": "Now classified as drama",
+  "runtimeMinutes": 95,
+  "releaseDate": "2020-01-01",
+  "genreIds": ["{{secondGenreId}}"]
+}
+
+###
+GET {{baseUrl}}/api/movies/{{movieId}}
+Authorization: Bearer {{adminToken}}
 
 ###
 PUT {{baseUrl}}/api/genres/{{genreId}}
@@ -233,12 +432,19 @@ DELETE {{baseUrl}}/api/genres/{{genreId}}
 Authorization: Bearer {{adminToken}}
 
 ###
+DELETE {{baseUrl}}/api/genres/{{secondGenreId}}
+Authorization: Bearer {{adminToken}}
+
+###
 DELETE {{baseUrl}}/api/moods/{{moodId}}
+Authorization: Bearer {{adminToken}}
+
+###
+DELETE {{baseUrl}}/api/moods/{{secondMoodId}}
 Authorization: Bearer {{adminToken}}
 
 ### Delete the viewer account; its old token stops working
 DELETE {{baseUrl}}/api/viewers/me
-Authorization: Bearer {{accessToken}}
 Authorization: Bearer {{accessToken}}
 
 ### Own-profile read without authentication returns 401
