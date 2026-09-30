@@ -45,6 +45,44 @@ public sealed class ImportWorkflowTests
     }
 
     [Fact]
+    public async Task Import_keeps_manual_genre_and_its_movie_separate_from_external_genre()
+    {
+        var source = new StubTmdbClient();
+        using var factory = new ImportFactory(source);
+        using var client = factory.CreateClient();
+        await ApiAccounts.SignInAsync(client, "admin@example.com");
+        var manualGenreResponse = await client.PostAsJsonAsync("/api/genres", new { name = "Comedy" });
+        Assert.Equal(HttpStatusCode.Created, manualGenreResponse.StatusCode);
+        var manualGenre = await manualGenreResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var manualMovieResponse = await client.PostAsJsonAsync("/api/movies", new
+        {
+            title = "Local comedy", overview = "Manual", runtimeMinutes = 90,
+            releaseDate = "2020-01-01", genreIds = new[] { Id(manualGenre) }
+        });
+        Assert.Equal(HttpStatusCode.Created, manualMovieResponse.StatusCode);
+        var manualMovie = await manualMovieResponse.Content.ReadFromJsonAsync<JsonElement>();
+        await SubmitAsync(client);
+        using (var scope = factory.Services.CreateScope())
+            Assert.True(await scope.ServiceProvider.GetRequiredService<IImportProcessor>().ProcessOneAsync(default));
+
+        var genres = (await client.GetFromJsonAsync<JsonElement>("/api/genres")).EnumerateArray().ToArray();
+        Assert.Equal(2, genres.Length);
+        Assert.Null(genres.Single(g => Id(g) == Id(manualGenre)).GetProperty("tmdbId").GetString());
+        Assert.Equal(1, genres.Single(g => Id(g) != Id(manualGenre)).GetProperty("tmdbId").GetInt64());
+
+        source.GenreName = "Film comedy";
+        await SubmitAsync(client);
+        using (var scope = factory.Services.CreateScope())
+            Assert.True(await scope.ServiceProvider.GetRequiredService<IImportProcessor>().ProcessOneAsync(default));
+        var manualAfter = await client.GetFromJsonAsync<JsonElement>($"/api/movies/{Id(manualMovie)}");
+        Assert.Equal(Id(manualGenre), Id(manualAfter.GetProperty("genres")[0]));
+        Assert.Equal("Comedy", manualAfter.GetProperty("genres")[0].GetProperty("name").GetString());
+        var after = (await client.GetFromJsonAsync<JsonElement>("/api/genres")).EnumerateArray().ToArray();
+        Assert.Equal("Film comedy", after.Single(g => g.GetProperty("tmdbId").ValueKind != JsonValueKind.Null)
+            .GetProperty("name").GetString());
+    }
+
+    [Fact]
     public async Task Expired_lease_can_be_reclaimed_and_stale_owner_cannot_complete()
     {
         using var factory = new ImportFactory(new StubTmdbClient());
@@ -90,6 +128,45 @@ public sealed class ImportWorkflowTests
         var completed = await client.GetFromJsonAsync<JsonElement>($"/api/import-jobs/{Id(submitted)}");
         Assert.Equal("Completed", completed.GetProperty("status").GetString());
         Assert.Equal(2, completed.GetProperty("attemptCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task Retry_after_is_capped_at_one_hour()
+    {
+        var clock = new ManualTimeProvider(new DateTimeOffset(2026, 9, 30, 12, 0, 0, TimeSpan.Zero));
+        var source = new StubTmdbClient { FailuresRemaining = 1, Retryable = true, RetryAfter = TimeSpan.FromDays(5) };
+        using var factory = new ImportFactory(source, clock);
+        using var client = factory.CreateClient();
+        await ApiAccounts.SignInAsync(client, "admin@example.com");
+        var job = await SubmitAsync(client);
+        using var scope = factory.Services.CreateScope();
+        Assert.True(await scope.ServiceProvider.GetRequiredService<IImportProcessor>().ProcessOneAsync(default));
+        var pending = await client.GetFromJsonAsync<JsonElement>($"/api/import-jobs/{Id(job)}");
+        Assert.Equal(clock.GetUtcNow().UtcDateTime.AddHours(1), pending.GetProperty("nextAttemptAt").GetDateTime());
+    }
+
+    [Fact]
+    public async Task Earlier_movie_survives_later_source_failure_and_retry_upserts_without_duplicates()
+    {
+        var clock = new ManualTimeProvider(new DateTimeOffset(2026, 9, 30, 12, 0, 0, TimeSpan.Zero));
+        var source = new StubTmdbClient { Ids = [42, 43], DetailFailuresRemaining = 1 };
+        using var factory = new ImportFactory(source, clock);
+        using var client = factory.CreateClient();
+        await ApiAccounts.SignInAsync(client, "admin@example.com");
+        var job = await SubmitAsync(client);
+        using var scope = factory.Services.CreateScope();
+        var processor = scope.ServiceProvider.GetRequiredService<IImportProcessor>();
+        Assert.True(await processor.ProcessOneAsync(default));
+        Assert.Equal("Pending", (await client.GetFromJsonAsync<JsonElement>($"/api/import-jobs/{Id(job)}"))
+            .GetProperty("status").GetString());
+        Assert.Single((await client.GetFromJsonAsync<JsonElement>("/api/movies")).EnumerateArray());
+
+        clock.Advance(TimeSpan.FromMinutes(5));
+        Assert.True(await processor.ProcessOneAsync(default));
+        var completed = await client.GetFromJsonAsync<JsonElement>($"/api/import-jobs/{Id(job)}");
+        Assert.Equal("Completed", completed.GetProperty("status").GetString());
+        var movies = (await client.GetFromJsonAsync<JsonElement>("/api/movies")).EnumerateArray().ToArray();
+        Assert.Equal(new long[] { 42, 43 }, movies.Select(movie => movie.GetProperty("tmdbId").GetInt64()).Order().ToArray());
     }
 
     [Fact]
@@ -199,17 +276,25 @@ public sealed class ImportWorkflowTests
     private sealed class StubTmdbClient : ITmdbClient
     {
         public string Title { get; set; } = "First title";
+        public string GenreName { get; set; } = "Comedy";
+        public IReadOnlyList<long> Ids { get; set; } = [42, 42];
         public int FailuresRemaining { get; set; }
+        public int DetailFailuresRemaining { get; set; }
         public bool Retryable { get; set; }
+        public TimeSpan RetryAfter { get; set; } = TimeSpan.FromMinutes(5);
         public Task<IReadOnlyList<long>> DiscoverMovieIdsAsync(int page, CancellationToken cancellationToken)
         {
             if (FailuresRemaining-- > 0)
-                throw new ImportSourceException("Controlled TMDB failure.", Retryable, TimeSpan.FromMinutes(5));
-            return Task.FromResult<IReadOnlyList<long>>([42, 42]);
+                throw new ImportSourceException("Controlled TMDB failure.", Retryable, RetryAfter);
+            return Task.FromResult(Ids);
         }
         public Task<ImportedMovieDto?> GetMovieAsync(long tmdbId, CancellationToken cancellationToken)
-            => Task.FromResult<ImportedMovieDto?>(new ImportedMovieDto(tmdbId, Title, "Overview", 90,
-                new DateOnly(2020, 1, 1), 100, [new ImportedGenreDto(1, "Comedy")]));
+        {
+            if (tmdbId == 43 && DetailFailuresRemaining-- > 0)
+                throw new ImportSourceException("Controlled detail failure.", true, RetryAfter);
+            return Task.FromResult<ImportedMovieDto?>(new ImportedMovieDto(tmdbId, Title, "Overview", 90,
+                new DateOnly(2020, 1, 1), 100, [new ImportedGenreDto(1, GenreName)]));
+        }
     }
 
     private sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using MovieWatch.Domain.Dto;
 using MovieWatch.Domain.Models;
 using MovieWatch.Repository.Interface;
@@ -10,37 +11,42 @@ public sealed class CatalogueImportRepository(ApplicationDbContext context) : IC
     public async Task UpsertAsync(ImportedMovieDto imported, DateTimeOffset now, CancellationToken cancellationToken)
     {
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-        var genreIds = new List<Guid>();
-        foreach (var external in imported.Genres)
+        try
         {
-            var genre = await context.Genres.SingleOrDefaultAsync(g => g.TmdbId == external.TmdbId, cancellationToken)
-                ?? await context.Genres.SingleOrDefaultAsync(g => g.TmdbId == null && g.Name == external.Name, cancellationToken);
-            if (genre is null)
+            var genreIds = new List<Guid>();
+            foreach (var external in imported.Genres)
             {
-                genre = new Genre(external.Name, external.TmdbId);
-                context.Genres.Add(genre);
+                var genre = await context.Genres.SingleOrDefaultAsync(g => g.TmdbId == external.TmdbId, cancellationToken);
+                if (genre is null)
+                {
+                    genre = new Genre(external.Name, external.TmdbId);
+                    context.Genres.Add(genre);
+                }
+                else
+                    genre.Refresh(external.TmdbId, external.Name);
+                genreIds.Add(genre.Id);
             }
-            else
+            await context.SaveChangesAsync(cancellationToken);
+            var movie = await context.Movies.SingleOrDefaultAsync(m => m.TmdbId == imported.TmdbId, cancellationToken);
+            if (movie is null)
             {
-                genre.Refresh(external.TmdbId, external.Name);
+                movie = new Movie(imported.Title, imported.Overview, imported.RuntimeMinutes, imported.ReleaseDate);
+                context.Movies.Add(movie);
             }
-            genreIds.Add(genre.Id);
+            movie.Refresh(imported.TmdbId, imported.Title, imported.Overview, imported.RuntimeMinutes,
+                imported.ReleaseDate, imported.VoteCount, now);
+            var desired = genreIds.ToHashSet();
+            foreach (var old in movie.MovieGenres.Where(link => !desired.Contains(link.GenreId)))
+                context.MovieGenres.Remove(old);
+            foreach (var id in desired.Where(id => movie.MovieGenres.All(link => link.GenreId != id)))
+                context.MovieGenres.Add(new MovieGenre(movie.Id, id));
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
-        await context.SaveChangesAsync(cancellationToken);
-        var movie = await context.Movies.SingleOrDefaultAsync(m => m.TmdbId == imported.TmdbId, cancellationToken);
-        if (movie is null)
+        catch (DbUpdateException exception) when (exception.InnerException is SqliteException
+            { SqliteExtendedErrorCode: 2067 or 1555 or 787 or 275 or 1299 })
         {
-            movie = new Movie(imported.Title, imported.Overview, imported.RuntimeMinutes, imported.ReleaseDate);
-            context.Movies.Add(movie);
+            throw new ImportLoadException("Imported movie conflicts with catalogue data.", exception);
         }
-        movie.Refresh(imported.TmdbId, imported.Title, imported.Overview, imported.RuntimeMinutes,
-            imported.ReleaseDate, imported.VoteCount, now);
-        var desired = genreIds.ToHashSet();
-        foreach (var old in movie.MovieGenres.Where(link => !desired.Contains(link.GenreId)))
-            context.MovieGenres.Remove(old);
-        foreach (var id in desired.Where(id => movie.MovieGenres.All(link => link.GenreId != id)))
-            context.MovieGenres.Add(new MovieGenre(movie.Id, id));
-        await context.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
     }
 }

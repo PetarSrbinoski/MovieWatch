@@ -3,6 +3,7 @@ using MovieWatch.Domain.Dto;
 using MovieWatch.Domain.Models;
 using MovieWatch.Repository.Interface;
 using MovieWatch.Service.Interface;
+using MovieWatch.Service.Mapper;
 
 namespace MovieWatch.Service.Implementation;
 
@@ -104,14 +105,9 @@ public sealed class RecommendationService(
         IEnumerable<Ranked> results, IReadOnlyList<Guid> participants)
         => new(context.Mood, query, context.Now, results.OrderByDescending(r => r.Score)
             .ThenByDescending(r => r.Movie.VoteCount).ThenBy(r => r.Movie.Id).Take(query.Limit)
-            .Select(r => new RecommendationDto(ToDto(r.Movie), Math.Round(r.Score, 3), r.Explanation,
+            .Select(r => new RecommendationDto(r.Movie.ToDto(), Math.Round(r.Score, 3), r.Explanation,
                 r.Contributions, r.MemberScores.Select(m => m with { Score = Math.Round(m.Score, 3) }).ToArray()))
             .ToArray(), participants);
-
-    private static MovieDto ToDto(Movie movie) => new(movie.Id, movie.Title, movie.Overview, movie.RuntimeMinutes,
-        movie.ReleaseDate, movie.TmdbId, movie.VoteCount, movie.LastImportedAt,
-        movie.MovieGenres.OrderBy(link => link.Genre.Name)
-            .Select(link => new GenreDto(link.GenreId, link.Genre.Name, link.Genre.TmdbId)).ToArray());
 
     private sealed record Context(MoodDto Mood, List<Movie> Movies, DateOnly Today, DateTimeOffset Now);
     private sealed record Ranked(Movie Movie, double Score, string Explanation,

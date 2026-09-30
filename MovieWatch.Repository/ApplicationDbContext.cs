@@ -34,7 +34,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         builder.Entity<Genre>(genre =>
         {
             genre.Property(g => g.Name).HasMaxLength(100).IsRequired();
-            genre.HasIndex(g => g.Name).IsUnique();
+            genre.HasIndex(g => g.Name).IsUnique().HasFilter("TmdbId IS NULL");
             genre.HasIndex(g => g.TmdbId).IsUnique();
         });
         builder.Entity<Mood>(mood =>

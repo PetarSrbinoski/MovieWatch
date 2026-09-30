@@ -149,6 +149,50 @@ public sealed class CoreWorkflowTests
     }
 
     [Fact]
+    public async Task Deleting_a_nonowner_removes_personal_records_and_membership_but_keeps_shared_data()
+    {
+        using var factory = AdminFactory();
+        using var admin = factory.CreateClient();
+        await ApiAccounts.SignInAsync(admin, "admin@example.com");
+        var genre = await CreateAsync(admin, "/api/genres", new { name = "Drama" });
+        var mood = await CreateAsync(admin, "/api/moods", new { name = "Calm", description = "" });
+        var movie = await CreateAsync(admin, "/api/movies", new
+        {
+            title = "Shared film", overview = "", runtimeMinutes = 90,
+            releaseDate = "2020-01-01", genreIds = new[] { Id(genre) }
+        });
+        using var ana = factory.CreateClient();
+        await ApiAccounts.RegisterAsync(ana);
+        await ApiAccounts.SignInAsync(ana);
+        using var boris = factory.CreateClient();
+        var borisProfile = await ApiAccounts.RegisterAsync(boris, "boris@example.com", "Boris");
+        await ApiAccounts.SignInAsync(boris, "boris@example.com");
+        var group = await CreateAsync(ana, "/api/groups", new { name = "Friends", description = "" });
+        await CreateAsync(ana, $"/api/groups/{Id(group)}/members", new { viewerId = Id(borisProfile) });
+        await CreateAsync(boris, $"/api/viewers/{Id(borisProfile)}/preferences", new
+        {
+            genreId = Id(genre), moodId = Id(mood), weight = 1
+        });
+        await CreateAsync(boris, $"/api/viewers/{Id(borisProfile)}/watchlist", new
+        {
+            movieId = Id(movie), status = "Planned", note = "Later"
+        });
+
+        Assert.Equal(HttpStatusCode.NoContent, (await boris.DeleteAsync("/api/viewers/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await boris.GetAsync("/api/viewers/me")).StatusCode);
+        using var scope = factory.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.False(await database.Viewers.AnyAsync(viewer => viewer.Id == Id(borisProfile)));
+        Assert.False(await database.GenrePreferences.AnyAsync(preference => preference.ViewerId == Id(borisProfile)));
+        Assert.False(await database.WatchlistEntries.AnyAsync(entry => entry.ViewerId == Id(borisProfile)));
+        Assert.False(await database.GroupMemberships.AnyAsync(member => member.ViewerId == Id(borisProfile)));
+        Assert.True(await database.Groups.AnyAsync(item => item.Id == Id(group)));
+        Assert.True(await database.Movies.AnyAsync(item => item.Id == Id(movie)));
+        Assert.True(await database.Genres.AnyAsync(item => item.Id == Id(genre)));
+        Assert.True(await database.Moods.AnyAsync(item => item.Id == Id(mood)));
+    }
+
+    [Fact]
     public async Task Group_recommendations_average_members_and_ignore_opted_out_watched_history()
     {
         using var factory = AdminFactory();

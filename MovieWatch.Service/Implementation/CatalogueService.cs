@@ -3,6 +3,7 @@ using MovieWatch.Domain.Dto;
 using MovieWatch.Domain.Models;
 using MovieWatch.Repository.Interface;
 using MovieWatch.Service.Interface;
+using MovieWatch.Service.Mapper;
 
 namespace MovieWatch.Service.Implementation;
 
@@ -65,10 +66,10 @@ public sealed class CatalogueService(
 
     public async Task<List<MovieDto>> ListMoviesAsync(int skip, int take, CancellationToken cancellationToken)
         => (await movies.PageAsync(ValidateSkip(skip), ValidateTake(take), cancellationToken))
-            .Select(ToDto).ToList();
+            .Select(movie => movie.ToDto()).ToList();
 
     public async Task<MovieDto> GetMovieAsync(Guid id, CancellationToken cancellationToken)
-        => ToDto(await movies.GetAsync(m => m.Id == id, cancellationToken) ?? throw Missing("Movie"));
+        => (await movies.GetAsync(m => m.Id == id, cancellationToken) ?? throw Missing("Movie")).ToDto();
 
     public async Task<MovieDto> CreateMovieAsync(MovieInputDto input, CancellationToken cancellationToken)
     {
@@ -117,9 +118,6 @@ public sealed class CatalogueService(
 
     private static GenreDto ToDto(Genre genre) => new(genre.Id, genre.Name, genre.TmdbId);
     private static MoodDto ToDto(Mood mood) => new(mood.Id, mood.Name, mood.Description);
-    private static MovieDto ToDto(Movie movie) => new(movie.Id, movie.Title, movie.Overview,
-        movie.RuntimeMinutes, movie.ReleaseDate, movie.TmdbId, movie.VoteCount, movie.LastImportedAt,
-        movie.MovieGenres.OrderBy(link => link.Genre.Name).Select(link => ToDto(link.Genre)).ToArray());
     private static OperationException Missing(string type) => new(FailureKind.NotFound, $"{type} was not found.");
     private static string CleanName(string name, int maxLength = 100)
         => !string.IsNullOrWhiteSpace(name) && name.Trim().Length <= maxLength

@@ -41,7 +41,7 @@ public sealed class ImportProcessor(
                         .UpsertAsync(movie, clock.GetUtcNow(), work.Token);
                     await RecordAsync(job.Id, owner, true, work.Token);
                 }
-                catch (Microsoft.EntityFrameworkCore.DbUpdateException exception)
+                catch (ImportLoadException exception)
                 {
                     logger.LogWarning(exception, "Skipping TMDB movie {TmdbId} after a data conflict.", id);
                     await RecordAsync(job.Id, owner, false, work.Token);
@@ -60,6 +60,8 @@ public sealed class ImportProcessor(
             {
                 var baseDelay = TimeSpan.FromSeconds(5 * (1 << (job.AttemptCount - 1)));
                 var delay = exception.RetryAfter is { } retry && retry > baseDelay ? retry : baseDelay;
+                if (delay > TimeSpan.FromHours(1))
+                    delay = TimeSpan.FromHours(1);
                 await jobs.RetryAsync(job.Id, owner, Now(), Now() + delay, exception.Message, cancellationToken);
             }
             else
