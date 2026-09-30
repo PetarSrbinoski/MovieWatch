@@ -1,0 +1,245 @@
+@baseUrl = http://localhost:5080
+@email = ana@example.com
+@password = Example-password1!
+# Replace this value with accessToken from the login response.
+@accessToken = paste-login-access-token-here
+@adminToken = paste-administrator-access-token-here
+@viewerId = paste-viewer-id-here
+@secondViewerId = paste-second-viewer-id-here
+@secondViewerToken = paste-second-viewer-token-here
+@genreId = paste-genre-id-here
+@moodId = paste-mood-id-here
+@movieId = paste-movie-id-here
+@groupId = paste-group-id-here
+@membershipId = paste-membership-id-here
+@ownerMembershipId = paste-owner-membership-id-here
+@preferenceId = paste-preference-id-here
+@watchlistEntryId = paste-watchlist-entry-id-here
+@jobId = paste-job-id-here
+@jobVersion = paste-job-version-here
+
+### Register a viewer; repeat returns 409
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "displayName": "Ana"
+}
+
+### Sign in; copy accessToken into the variable above
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Read the signed-in viewer's profile
+GET {{baseUrl}}/api/viewers/me
+
+### Administrator signs in after bootstrap; copy the token to adminToken
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "your-configured-admin-password"
+}
+
+### Create shared genre and mood; copy their IDs
+POST {{baseUrl}}/api/genres
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "Comedy" }
+
+###
+POST {{baseUrl}}/api/moods
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "Relaxing", "description": "An easy evening" }
+
+### Create a manual movie; copy its ID
+POST {{baseUrl}}/api/movies
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "A Good Film",
+  "overview": "A short local example",
+  "runtimeMinutes": 90,
+  "releaseDate": "2020-01-01",
+  "genreIds": ["{{genreId}}"]
+}
+
+### Give this viewer a positive preference for the mood and genre
+POST {{baseUrl}}/api/viewers/{{viewerId}}/preferences
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "genreId": "{{genreId}}", "moodId": "{{moodId}}", "weight": 2 }
+
+### Explain personal recommendations, then download the same calculation
+GET {{baseUrl}}/api/viewers/{{viewerId}}/recommendations?moodId={{moodId}}&maximumRuntimeMinutes=120
+Authorization: Bearer {{accessToken}}
+
+###
+GET {{baseUrl}}/api/viewers/{{viewerId}}/recommendations.xlsx?moodId={{moodId}}&maximumRuntimeMinutes=120
+Authorization: Bearer {{accessToken}}
+
+### Save a movie as watched; normal recommendations now exclude it
+POST {{baseUrl}}/api/viewers/{{viewerId}}/watchlist
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "movieId": "{{movieId}}", "status": "Watched", "note": "Seen last week" }
+
+### Create a group with the signed-in viewer as owner and included member
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "name": "Friday films", "description": "Friends choosing together" }
+
+### Add an existing second viewer; copy the membership ID
+POST {{baseUrl}}/api/groups/{{groupId}}/members
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "viewerId": "{{secondViewerId}}" }
+
+### Group ranking and Excel export use equal member averages
+GET {{baseUrl}}/api/groups/{{groupId}}/recommendations?moodId={{moodId}}&maximumRuntimeMinutes=120
+Authorization: Bearer {{accessToken}}
+
+###
+GET {{baseUrl}}/api/groups/{{groupId}}/recommendations.xlsx?moodId={{moodId}}&maximumRuntimeMinutes=120
+Authorization: Bearer {{accessToken}}
+
+### Transfer ownership before the original owner leaves
+PUT {{baseUrl}}/api/groups/{{groupId}}/owner
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "viewerId": "{{secondViewerId}}" }
+
+### Queue a one-page TMDB import; copy job ID and version from the 202 response
+POST {{baseUrl}}/api/import-jobs
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "pageCount": 1 }
+
+### Poll job status; the worker runs separately from the POST request
+GET {{baseUrl}}/api/import-jobs/{{jobId}}
+Authorization: Bearer {{adminToken}}
+
+### Update or delete a Pending job with the version from its latest GET
+PUT {{baseUrl}}/api/import-jobs/{{jobId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "pageCount": 2, "version": {{jobVersion}} }
+
+### Delete only when Pending, Completed, or Failed; refresh jobVersion first
+DELETE {{baseUrl}}/api/import-jobs/{{jobId}}?version={{jobVersion}}
+Authorization: Bearer {{adminToken}}
+
+### Update and inspect the preference
+PUT {{baseUrl}}/api/viewers/{{viewerId}}/preferences/{{preferenceId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "weight": -1 }
+
+###
+GET {{baseUrl}}/api/viewers/{{viewerId}}/preferences/{{preferenceId}}
+Authorization: Bearer {{accessToken}}
+
+### Change the watchlist entry back to Planned
+PUT {{baseUrl}}/api/viewers/{{viewerId}}/watchlist/{{watchlistEntryId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "status": "Planned", "note": "Maybe later" }
+
+### Opt out the second member with their own token
+PUT {{baseUrl}}/api/groups/{{groupId}}/members/{{membershipId}}
+Authorization: Bearer {{secondViewerToken}}
+Content-Type: application/json
+
+{ "includedInRecommendations": false }
+
+### Update and inspect the group's details
+PUT {{baseUrl}}/api/groups/{{groupId}}
+Authorization: Bearer {{secondViewerToken}}
+Content-Type: application/json
+
+{ "name": "Weekend films", "description": "Updated" }
+
+### Remove personal dependencies, then the new owner deletes the group
+DELETE {{baseUrl}}/api/groups/{{groupId}}/members/{{ownerMembershipId}}
+Authorization: Bearer {{accessToken}}
+
+###
+DELETE {{baseUrl}}/api/viewers/{{viewerId}}/watchlist/{{watchlistEntryId}}
+Authorization: Bearer {{accessToken}}
+
+###
+DELETE {{baseUrl}}/api/viewers/{{viewerId}}/preferences/{{preferenceId}}
+Authorization: Bearer {{accessToken}}
+
+###
+DELETE {{baseUrl}}/api/groups/{{groupId}}
+Authorization: Bearer {{secondViewerToken}}
+
+### Delete the manual catalogue records after removing all references
+PUT {{baseUrl}}/api/movies/{{movieId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "A Good Film",
+  "overview": "Updated manual description",
+  "runtimeMinutes": 95,
+  "releaseDate": "2020-01-01",
+  "genreIds": ["{{genreId}}"]
+}
+
+###
+PUT {{baseUrl}}/api/genres/{{genreId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "Comedy and fun" }
+
+###
+PUT {{baseUrl}}/api/moods/{{moodId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "Relaxing", "description": "A gentle evening" }
+
+###
+DELETE {{baseUrl}}/api/movies/{{movieId}}
+Authorization: Bearer {{adminToken}}
+
+###
+DELETE {{baseUrl}}/api/genres/{{genreId}}
+Authorization: Bearer {{adminToken}}
+
+###
+DELETE {{baseUrl}}/api/moods/{{moodId}}
+Authorization: Bearer {{adminToken}}
+
+### Delete the viewer account; its old token stops working
+DELETE {{baseUrl}}/api/viewers/me
+Authorization: Bearer {{accessToken}}
+Authorization: Bearer {{accessToken}}
+
+### Own-profile read without authentication returns 401
+GET {{baseUrl}}/api/viewers/me
