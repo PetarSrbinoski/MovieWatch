@@ -1,4 +1,5 @@
 .idea/
+*.DotSettings.user
 **/bin/
 **/obj/
 **/TestResults/
